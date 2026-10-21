@@ -1,0 +1,11 @@
+{
+  "name": "agentops-global-rules",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable OpenCode development protocol and AgentOps tooling for the team",
+  "scripts": {
+    "install-rules": "node install.mjs",
+    "test": "node --test install.test.mjs"
+  }
+}

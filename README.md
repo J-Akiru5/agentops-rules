@@ -1,0 +1,131 @@
+# AgentOps global rules
+
+Portable OpenCode development protocol for the team: waiting/status discipline, branch-aware
+worktree orchestration, autonomous engineering, the planning backbone (`agentctl`), Vercel deployment
+governance, and multi-machine team coordination.
+
+OpenCode does **not** sync global instructions through an account. This package installs them on each
+machine from Git, non-destructively.
+
+## Requirements
+
+- Node.js **22.5+** (uses `node:sqlite`; tested on Node 24)
+- Git
+- OpenCode V2
+- Windows (PowerShell or cmd) or macOS/Linux
+
+## Install (each laptop)
+
+```powershell
+git clone https://github.com/J-Akiru5/agentops-rules.git
+cd agentops-rules
+node install.mjs
+```
+
+Then **restart OpenCode** and start a fresh session. Confirm:
+
+- Ask: “What is your waiting/status protocol?”
+- Ask: “Which branches may trigger Vercel deployments?”
+- Run: `node ~/.config/opencode/bin/agentctl.mjs help`
+
+If your config uses `opencode.json` instead of `opencode.jsonc`, the installer detects and updates it.
+`--target <dir>` installs into a custom OpenCode config directory (useful for testing).
+
+## What the installer changes
+
+| Target | Change |
+| --- | --- |
+| `~/.config/opencode/AGENTS.md` | Adds/updates a managed block. Your existing content is preserved. |
+| `~/.config/opencode/instructions/*.md` | Installs/updates the four shared rule files. |
+| `~/.config/opencode/bin/agentctl.mjs` + `bin/agentops/` | Installs the AgentOps CLI and modules. |
+| `~/.config/opencode/bin/orchestrator.mjs` | Installs the resource/worktree helper. |
+| `~/.config/opencode/opencode.jsonc` | Adds the managed instruction entries and safe permission rules. Existing keys, instructions and permissions are preserved. |
+
+- Every modified file is backed up to `~/.config/opencode/.agentops/backups/<timestamp>/` first.
+- Re-running is idempotent; managed entries are added once.
+- The installer rewrites `opencode.jsonc` as plain JSON (comments are lost in the live file, but the
+  original is in the backup). If you prefer to keep comments, merge manually from the backup instead.
+- No network calls, no secrets, no deployment side effects.
+
+Options: `--dry-run`, `--no-backup`, `--target <dir>`, `--run-tests` (runs the full reliability suite;
+takes several minutes), `--help`.
+
+## Update
+
+```powershell
+cd agentops-rules
+git pull
+node install.mjs
+```
+
+## Team model (important)
+
+- Rules are identical on every machine; **runtime state is not**.
+  `<git-common-dir>/agentops/state.db` is local to each clone. Claims/leases do not coordinate across
+  machines, and must not be placed on a network share or sync folder.
+- Designate one **integrator machine**. Only it runs `agentctl integrate` and pushes `origin/develop`.
+  Other machines implement, verify and push task branches.
+- Only the human promotes `main`. No agent pushes `main` or `staging`.
+- Use a unique `AGENT_ID` per machine when running `agentctl` (for example `opencode-loq`,
+  `opencode-laptop2`).
+- Before pushing a feature branch, confirm the repository's Vercel allowlist is active on `main`;
+  otherwise preview deployments can still be created and consume the daily allowance.
+- Cross-machine atomic claims require a shared state service, which this package does not provide.
+  Coordinate by task assignment in the plan/PR and branch ownership.
+
+## Included rules
+
+- `rules/AGENTS.md` — waiting/status protocol, branch-aware worktree orchestration, Vercel deployment
+  governance.
+- `rules/instructions/autonomous-orchestration.md` — autonomy tiers, resource-aware scheduling,
+  coordination, honesty rules.
+- `rules/instructions/agentops-backbone.md` — `agentctl` workflow, task contracts, evidence, integration,
+  database and reporting.
+- `rules/instructions/deployment-governance.md` — deployment allowlist, agent prohibitions, first-
+  instantiation checklist.
+- `rules/instructions/team-development.md` — multi-machine roles, handoffs, state limitations.
+- `bin/agentctl.mjs` + `bin/agentops/*` — deterministic planning/verification/integration CLI.
+- `bin/orchestrator.mjs` — resource and worktree inventory helper.
+
+## Uninstall / rollback
+
+Restore the files from the newest backup directory:
+
+```powershell
+Get-ChildItem ~/.config/opencode/.agentops/backups | Sort-Object Name | Select-Object -Last 1
+```
+
+Copy the backed-up files back over the installed ones. Remove the managed block (between
+`<!-- BEGIN agentops-global (managed) -->` and `<!-- END agentops-global (managed) -->`) from
+`AGENTS.md`. Remove the managed `instructions` entries and permission rules if desired.
+
+## Using with the Lagavista repository
+
+```powershell
+git clone https://github.com/J-Akiru5/lagavista.git
+cd lagavista
+agentctl plan sync
+agentctl status
+```
+
+The project’s `AGENTS.md`, `plan/` contracts and policy travel with the repository. The global rules
+installed by this package supply the workflow; `agentctl` is installed at
+`~/.config/opencode/bin/agentctl.mjs`.
+
+Set a per-machine identity for local state and evidence:
+
+```powershell
+$env:AGENT_ID = "opencode-laptop2"   # add to your PowerShell profile
+```
+
+Designate one integrator machine (normally the primary machine) to run `agentctl integrate` and push
+`origin/develop`. The other machine pushes task branches and does not integrate.
+
+## Develop this package
+
+```powershell
+node --test install.test.mjs
+node install.mjs --target .\tmp-test
+```
+
+Version: see `VERSION`. Changes: see `CHANGELOG.md`.
