@@ -28,6 +28,14 @@ export class Refusal extends Error {
   }
 }
 
+/** A scheduling deferral: the work did not run, but no task state may be marked failed. */
+export class ResourceDeferral extends Refusal {
+  constructor(message, details = null) {
+    super(message, details);
+    this.name = "ResourceDeferral";
+  }
+}
+
 export function measure(repo) {
   const measured = readResources(repo);
   const advice = resourceAdvice(measured);
@@ -55,30 +63,30 @@ export function admit(db, repo, { taskId = null, agent = null, resourceClass, le
     // Light work is always admitted; it is the escape hatch under pressure.
   } else if (resourceClass === "moderate") {
     if (effective.level === "red") {
-      throw new Refusal(
-        `resource level is red (${resources.reasons.join("; ")}); moderate work is blocked. Do light work or retry later.`,
+      throw new ResourceDeferral(
+        `resource level is red (${resources.reasons.join("; ")}); moderate work is deferred, not failed. Continue with light work or another eligible task and retry later.`,
       );
     }
     const reserved = activeReservations(db).filter((row) => row.resource_class !== "light");
     if (reserved.length >= effective.moderateSlots) {
-      throw new Refusal(
+      throw new ResourceDeferral(
         `moderate slots are full (${reserved.length}/${effective.moderateSlots}); ${reserved
           .map((row) => `${row.resource_class}:${row.task_id ?? row.owner ?? "?"}`)
-          .join(", ")}`,
+          .join(", ")}. Deferred, not failed; continue with light work or another eligible task.`,
       );
     }
   } else if (resourceClass === "heavy") {
     if (effective.heavySlots < 1) {
-      throw new Refusal(
-        `resource level is ${effective.level} (${resources.reasons.join("; ") || "no heavy slot"}); heavy work is blocked.`,
+      throw new ResourceDeferral(
+        `resource level is ${effective.level} (${resources.reasons.join("; ") || "no heavy slot"}); heavy work is deferred, not failed. Continue with light work or another eligible task and retry later.`,
       );
     }
     const reserved = activeReservations(db).filter((row) => row.resource_class !== "light");
     if (reserved.length >= effective.heavySlots) {
-      throw new Refusal(
+      throw new ResourceDeferral(
         `heavy slots are full (${reserved.length}/${effective.heavySlots}); ${reserved
           .map((row) => `${row.resource_class}:${row.task_id ?? row.owner ?? "?"}`)
-          .join(", ")}`,
+          .join(", ")}. Deferred, not failed; continue with light work or another eligible task.`,
       );
     }
   } else {

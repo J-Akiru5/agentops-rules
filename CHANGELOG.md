@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 — 2026-10-22
+
+- **Resource pressure is a deferral, not a stop order.** Red/amber levels continue with light work,
+  light subagents, or another eligible task; heavy checks are deferred and retried. Updated
+  `autonomous-orchestration`, `agentops-backbone`, the global `AGENTS.md` block and `orchestrator`
+  advice.
+- **Subagent orchestration standard**: `rules/instructions/subagent-orchestration.md` defines when to
+  dispatch, the dispatch contract, resource rules and the benchmark standard.
+- **Global `benchmark` subagent**: `rules/agents/benchmark.md` is read-only, cannot push/deploy/install,
+  and returns measured evidence with baseline, workload, repetitions and spread.
+- **AgentOps deferral semantics**: `verify` and `integrate` record a resource deferral, leave the task
+  state intact, never mark failure, and instruct the agent to continue with other work.
+- Installer copies `agents/`; docs updated (`docs/SUBAGENTS.md`, OPENCODE-2, TEAM-PLAN, README).
+- Tests updated for deferral recording and integration deferral (no `develop` movement).
+
 ## 1.2.0 — 2026-10-21
 
 - **OpenCode 2 documentation and migration**: `docs/OPENCODE-2.md` covers fresh install, V1 → V2

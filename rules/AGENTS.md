@@ -248,6 +248,20 @@ Never claim a branch was integrated, a remote copy was verified, a test passed, 
 
 The purpose of orchestration is to consolidate parallel work without losing valuable changes, not to maximize merge speed or minimize the number of worktrees at any cost.
 
+# Resource pressure, delegation and subagents
+
+A red resource level is a scheduling constraint, **not a stop order**.
+
+- Continue with light work, dispatch light subagents, or pick another eligible task while heavy
+  builds/tests/installs are deferred. Do not idle while safe work exists.
+- Never claim a deferred check passed. Record the deferral and retry when resources allow.
+- Use subagents for independent, parallelizable work (exploration, review, docs, benchmarking); the
+  parent verifies their output. Never use them to bypass permissions or deployments.
+- The global `benchmark` subagent is the standard for performance/resource-sensitive work. It is
+  read-only, cannot push or deploy, and reports measured evidence; the implementer may not
+  self-certify its own benchmark.
+- Full standard: `~/.config/opencode/instructions/subagent-orchestration.md`.
+
 # Vercel Deployment Governance
 
 Automatic Vercel deployments are allowed **only** for `main` and `develop`. Every other branch —

@@ -26,7 +26,7 @@ import {
   resolvePlanSource,
   scopeViolations,
 } from "./agentops/planlib.mjs";
-import { Refusal, measure, runProfile } from "./agentops/runner.mjs";
+import { Refusal, ResourceDeferral, measure, runProfile } from "./agentops/runner.mjs";
 import {
   ackContract,
   ackStatus,
@@ -537,16 +537,34 @@ async function cmdVerify(ctx) {
   if (!profile) throw new Refusal(`unknown verification profile "${profileName}"`);
   const tree = treeSha(repo);
   const commit = headSha(repo);
-  const result = await runProfile(db, repo, dirs.common, {
-    taskId: id,
-    agent,
-    profileName,
-    profile,
-    cwd: repo,
-    tree,
-    commit,
-    note: `local verification on ${currentBranch(repo)}`,
-  });
+  let result;
+  try {
+    result = await runProfile(db, repo, dirs.common, {
+      taskId: id,
+      agent,
+      profileName,
+      profile,
+      cwd: repo,
+      tree,
+      commit,
+      note: `local verification on ${currentBranch(repo)}`,
+    });
+  } catch (error) {
+    if (error?.name === "ResourceDeferral") {
+      updateTask(db, id, { blocked_reason: `deferred: ${error.message}` });
+      recordEvent(db, { taskId: id, agent, kind: "verification_deferred", message: error.message });
+      if (args.flags.json) {
+        print({ task: id, deferred: true, reason: error.message }, true);
+      } else {
+        console.error(`verify ${id} deferred by resource admission: ${error.message}`);
+        console.error(
+          "This is a scheduling deferral, not a task failure. Continue with light work or another eligible task; retry verify when resources allow.",
+        );
+      }
+      return EXIT.REFUSED;
+    }
+    throw error;
+  }
   if (result.status === "pass") {
     updateTask(db, id, { state: "verified", blocked_reason: null, head_commit: commit });
     recordEvent(db, { taskId: id, agent, kind: "verified", message: `${profileName} pass`, data: { evidenceId: result.evidenceId } });
@@ -1037,6 +1055,7 @@ function cmdStatus(ctx) {
       rev: task.contract_rev,
       owner: task.owner_agent,
       lease: task.lease_expires_at,
+      blocked: task.blocked_reason ?? null,
       integrated: task.integrated_commit,
     })),
     claims,
@@ -1053,6 +1072,8 @@ function cmdStatus(ctx) {
     for (const task of view.tasks) console.log(`| ${task.id} | ${task.state} | ${task.rev} | ${task.owner ?? "-"} | ${task.lease ?? "-"} |`);
     if (claims.length) console.log(`\nactive claims: ${claims.map((claim) => `${claim.task_id}@${claim.agent} until ${claim.expires_at}`).join("; ")}`);
     if (locks.length) console.log(`locks: ${locks.map((lock) => `${lock.name}@${lock.owner} until ${lock.expires_at}`).join("; ")}`);
+    const blocked = view.tasks.filter((task) => task.blocked);
+    if (blocked.length) console.log(`\ndeferred/blocked: ${blocked.map((task) => `${task.id}: ${task.blocked}`).join(" | ")}`);
   }
   return EXIT.OK;
 }
@@ -1371,7 +1392,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       if (error?.name === "UsageError") {
         console.error(error.message);
         process.exitCode = EXIT.USAGE;
-      } else if (error?.name === "Refusal" || error?.name === "StateRefusal" || error?.name === "PlanError" || error?.name === "YamlError") {
+      } else if (error?.name === "Refusal" || error?.name === "ResourceDeferral" || error?.name === "StateRefusal" || error?.name === "PlanError" || error?.name === "YamlError") {
         console.error(error.message);
         if (error.details?.length) console.error(error.details.join("\n"));
         process.exitCode = EXIT.REFUSED;

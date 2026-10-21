@@ -21,7 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import { runDevelopmentMigration } from "./dbplane.mjs";
 import { loadPlan, matchesAny, scopeViolations } from "./planlib.mjs";
-import { Refusal, runProfile } from "./runner.mjs";
+import { Refusal, ResourceDeferral, runProfile } from "./runner.mjs";
 import { acquireLock, getAgent, getTask, recordEvent, releaseLock, updateTask } from "./state.mjs";
 
 function git(cwd, args) {
@@ -284,17 +284,30 @@ export async function integrateTask(ctx) {
     const profile = policy.verification?.profiles?.[profileName];
     if (!profile) throw new Refusal(`verification profile "${profileName}" is not defined in plan/policy.yaml`);
 
-    const verification = await runProfile(db, repo, commonDir, {
-      taskId,
-      agent,
-      profileName,
-      profile,
-      cwd: candidate,
-      tree: mergeTree,
-      commit: mergeSha,
-      note: `integration candidate for ${taskId}@${submitted.slice(0, 8)} on ${target}@${developSha.slice(0, 8)}`,
-      labelPrefix: `integrate-${taskId}`,
-    });
+    const verification = await (async () => {
+      try {
+        return await runProfile(db, repo, commonDir, {
+          taskId,
+          agent,
+          profileName,
+          profile,
+          cwd: candidate,
+          tree: mergeTree,
+          commit: mergeSha,
+          note: `integration candidate for ${taskId}@${submitted.slice(0, 8)} on ${target}@${developSha.slice(0, 8)}`,
+          labelPrefix: `integrate-${taskId}`,
+        });
+      } catch (error) {
+        if (error?.name === "ResourceDeferral") {
+          recordEvent(db, { taskId, agent, kind: "integration_deferred", message: error.message });
+          updateTask(db, taskId, { blocked_reason: `deferred: ${error.message}` });
+          throw new ResourceDeferral(
+            `Integration deferred by resource admission; ${target} is unchanged and the task remains submitted. ${error.message} Continue with light work or another eligible task and retry later.`,
+          );
+        }
+        throw error;
+      }
+    })();
     if (verification.status !== "pass") {
       fail(db, taskId, agent, `integration verification failed (${profileName})`, {
         evidenceId: verification.evidenceId,

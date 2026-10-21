@@ -565,8 +565,41 @@ test("resource admission: moderate work is refused under a red level while light
     assertOk(agentctl(fixture.repo, ["plan", "sync"]), "sync");
     assertOk(agentctl(fixture.repo, ["claim", "T-0001", "--agent", "impl-1", "--branch", "feature/t1"]), "claim");
     const red = { AGENTOPS_RESOURCE_LEVEL_OVERRIDE: "red" };
-    assertRefused(agentctl(fixture.repo, ["verify", "T-0001", "--agent", "impl-1", "--profile", "moderate-pass"], { env: red }), "moderate under red", /resource level is red/);
+    const refused = assertRefused(agentctl(fixture.repo, ["verify", "T-0001", "--agent", "impl-1", "--profile", "moderate-pass"], { env: red }), "moderate under red", /resource level is red/);
+    assert.match(refused.stderr, /deferral|deferred/i);
+    const afterRefusal = statusOf(fixture.repo, red);
+    const deferredTask = afterRefusal.tasks.find((row) => row.id === "T-0001");
+    assert.match(deferredTask.blocked, /deferred/i, "resource deferral must be recorded on the task");
+    assert.ok(["claimed", "in_progress"].includes(deferredTask.state), "state must not be marked failed");
     assertOk(agentctl(fixture.repo, ["verify", "T-0001", "--agent", "impl-1", "--profile", "docs"], { env: red }), "light under red");
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("integration resource deferral leaves develop untouched and the task submitted", () => {
+  const fixture = makeRepo({ tasks: [["T-0010", { profile: "moderate-pass" }]] });
+  try {
+    fixture.feature();
+    const green = { AGENTOPS_RESOURCE_LEVEL_OVERRIDE: "green" };
+    const red = { AGENTOPS_RESOURCE_LEVEL_OVERRIDE: "red" };
+    assertOk(agentctl(fixture.repo, ["plan", "sync"], { env: green }), "sync");
+    assertOk(agentctl(fixture.repo, ["agent", "register", "--id", "integrator-1", "--role", "integrator"], { env: green }), "register");
+    assertOk(agentctl(fixture.repo, ["claim", "T-0010", "--agent", "impl-1", "--branch", "feature/t1"], { env: green }), "claim");
+    assertOk(agentctl(fixture.repo, ["verify", "T-0010", "--agent", "impl-1", "--profile", "moderate-pass"], { env: green }), "verify");
+    assertOk(agentctl(fixture.repo, ["checkpoint", "T-0010", "--agent", "impl-1", "--push"], { env: green }), "push");
+    assertOk(agentctl(fixture.repo, ["submit", "T-0010", "--agent", "impl-1"], { env: green }), "submit");
+    const before = git(fixture.repo, ["rev-parse", "develop"]);
+    assertRefused(
+      agentctl(fixture.repo, ["integrate", "T-0010", "--agent", "integrator-1", "--plan-source", "worktree"], { env: red }),
+      "integration deferral",
+      /deferred/i,
+    );
+    assert.equal(git(fixture.repo, ["rev-parse", "develop"]), before, "develop must not move on a resource deferral");
+    const status = statusOf(fixture.repo, red);
+    const task = status.tasks.find((row) => row.id === "T-0010");
+    assert.equal(task.state, "submitted");
+    assert.match(task.blocked, /deferred/i);
   } finally {
     fixture.cleanup();
   }

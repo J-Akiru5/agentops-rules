@@ -47,4 +47,4 @@ Do not run opencode, vercel, or any deployment.
 node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync(process.env.USERPROFILE+'/.config/opencode/opencode.jsonc','utf8'));console.log({permissions:Array.isArray(c.permissions),v1Block:Object.hasOwn(c,'permission'),instructions:c.instructions.length,permissionRules:c.permissions?.length})"
 ```
 
-Expected: `{"permissions":true,"v1Block":false,"instructions":4,"permissionRules":27}`.
+Expected: `{"permissions":true,"v1Block":false,"instructions":5,"permissionRules":27}`.

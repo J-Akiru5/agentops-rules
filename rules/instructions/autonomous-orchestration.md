@@ -75,9 +75,13 @@ reserved for agents.
   deliberately: prefer one at a time, reuse caches, and do not run verification another agent is
   already running.
 - Do not start a migration, an install or a full build "to see if it works" while the machine is under
-  pressure. Queue it or wait.
+  pressure. Defer it: record the deferred check, continue with light work or another eligible task, and
+  retry when resources allow. Resource pressure is a scheduling constraint, not a stop order.
 - Do not kill another agent's process to free resources without confirming its owner. If blocked by
   resources, do useful light work and report the constraint instead of retrying the same failure.
+- A red level must not idle the agent. Continue with light work, dispatch light subagents, or switch to
+  another eligible task; stop only when no safe work remains or a Tier C boundary is reached.
+- Delegation and the benchmark standard are defined in `subagent-orchestration.md`.
 
 The helper is **advisory**: OpenCode has no global job scheduler. The protocol plus measurement is the
 mechanism; there is no enforced concurrency limit. Say so rather than implying one.
@@ -101,6 +105,16 @@ Worktrees are shared ground. Before work that can interact with parallel work, r
 - The durable coordination record is the repository itself: the plan document, the PR, the commit
   messages and the branch inventory. Do not invent a parallel coordination database when the
   repository already records this.
+
+## Delegation and benchmarks
+
+- Dispatch subagents for independent, parallelizable work: exploration, review, test design, docs,
+  log triage, and measurement. The parent owns verification; subagent prose is not evidence.
+- Parallelize light work only. Do not run competing heavy benchmark/build/test jobs; schedule them.
+- The global `benchmark` subagent is the standard for performance, resource-cost, latency, memory,
+  bundle-size, query-plan and regression claims. An implementer may not self-certify its own
+  benchmark.
+- Full dispatch contract and benchmark rules: `subagent-orchestration.md`.
 
 ## Resumability
 

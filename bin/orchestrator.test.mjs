@@ -100,7 +100,7 @@ test("resourceAdvice is green with headroom, amber when tight, red under pressur
   });
   assert.equal(redMemory.level, "red");
   assert.equal(redMemory.heavySlots, 0);
-  assert.match(redMemory.advice, /light work only/i);
+  assert.match(redMemory.advice, /continue with light work/i);
 
   const redLoad = resourceAdvice({ freeMemGb: 12, cpuCount: 8, loadPct: 95, freeDiskGb: 100 });
   assert.equal(redLoad.level, "red");

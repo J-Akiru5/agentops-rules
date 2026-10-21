@@ -89,6 +89,11 @@ Acceptance:
   generated types) are one task at a time.
 - Amendments: Tier 1 self-approved, Tier 2 via a lead, Tier 3 only with owner authorization.
 - Integrations are serialized on the LOQ; laptop 2 never integrates unless designated.
+- Dispatch subagents for independent light work (exploration, review, docs, log triage); use the
+  `benchmark` subagent for performance/resource-sensitive acceptance. The parent records the result
+  as evidence; no self-certified benchmarks.
+- Resource pressure is a scheduling constraint, not a stop order: continue light work or another task,
+  defer heavy checks, and never claim deferred checks passed.
 - Deployments: only `main` (human promotion) and `develop` (integrator push). No previews, no manual
   `vercel deploy`, no deploy hooks without authorization.
 - Weekly: `agentctl report` from the LOQ; review blocked tasks, amendments and worktree retention.

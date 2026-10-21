@@ -63,8 +63,16 @@ at its last verified commit.
 
 ## Resources
 
-- Measure first: `agentctl resources`. Light work is always admitted; moderate/heavy work is refused
-  under pressure. Do not kill another agent's process to free resources without ownership.
+- Measure first: `agentctl resources`. Light work is always admitted. Moderate/heavy work is refused
+  under pressure, but that refusal is a **deferral, not a task failure**: the task keeps its state, the
+  deferral is journaled, and the agent continues with light work or another eligible task and retries
+  later. Never mark a deferred check passed.
+- If `verify` or `integrate` reports a resource deferral, do not release the claim or mark the task
+  failed. Record the deferral and continue. The integrator leaves the task `submitted` and `develop`
+  unchanged.
+- Do not kill another agent's process to free resources without ownership.
+- Delegation standard: `subagent-orchestration.md`. The parent verifies subagent output; the
+  `benchmark` subagent is required for performance/resource-sensitive claims.
 
 ## Coordination and cleanup
 

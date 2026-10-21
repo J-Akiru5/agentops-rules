@@ -48,6 +48,7 @@ const MANAGED_INSTRUCTION_FILES = [
   "agentops-backbone.md",
   "deployment-governance.md",
   "team-development.md",
+  "subagent-orchestration.md",
 ];
 
 const MANAGED_PERMISSIONS = [
@@ -443,6 +444,13 @@ function main() {
     copy(path.join(BIN_DIR, rel), path.join(target, "bin", rel));
   }
 
+  // 3b. Global subagents (benchmark and future standards)
+  const agentsSource = path.join(RULES_DIR, "agents");
+  const agentFiles = fs.existsSync(agentsSource) ? walkFiles(agentsSource) : [];
+  for (const rel of agentFiles) {
+    copy(path.join(agentsSource, rel), path.join(target, "agents", rel));
+  }
+
   // 4. Config merge, version-aware
   const config = structuredClone(existingConfig);
   if (!config.$schema) config.$schema = "https://opencode.ai/config.json";
@@ -474,6 +482,7 @@ function main() {
   console.log(`AGENTS.md: managed block ${existingAgents.includes(BEGIN) ? "updated" : "installed"}`);
   console.log(`instructions: ${instructionFiles.length} file(s) (${instructionMerge.removed} legacy path(s) replaced)`);
   console.log(`agentctl: ${binFiles.length} file(s)`);
+  console.log(`subagents: ${agentFiles.length} file(s)`);
   if (opencode.generation === "v1") {
     console.log(
       `permission: V1 shell rules (${permissionMerge.rules})${permissionMerge.hadPermissionsArray ? "; removed unsupported V2 permissions array" : ""}`,

@@ -71,7 +71,7 @@ node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync(process.env.U
 Expected:
 
 ```json
-{ "permissions": true, "v1Block": false, "instructions": 4, "permissionRules": 27 }
+{ "permissions": true, "v1Block": false, "instructions": 5, "permissionRules": 27 }
 ```
 
 The config should contain an absolute `instructions` entry for each of:
@@ -80,6 +80,10 @@ The config should contain an absolute `instructions` entry for each of:
 - `instructions/agentops-backbone.md`
 - `instructions/deployment-governance.md`
 - `instructions/team-development.md`
+- `instructions/subagent-orchestration.md`
+
+The installer also places the read-only `benchmark` subagent at
+`~/.config/opencode/agents/benchmark.md`.
 
 ## V2 config shape (excerpt)
 
@@ -90,7 +94,8 @@ The config should contain an absolute `instructions` entry for each of:
     "C:/Users/<you>/.config/opencode/instructions/autonomous-orchestration.md",
     "C:/Users/<you>/.config/opencode/instructions/agentops-backbone.md",
     "C:/Users/<you>/.config/opencode/instructions/deployment-governance.md",
-    "C:/Users/<you>/.config/opencode/instructions/team-development.md"
+    "C:/Users/<you>/.config/opencode/instructions/team-development.md",
+    "C:/Users/<you>/.config/opencode/instructions/subagent-orchestration.md"
   ],
   "permissions": [
     { "action": "shell", "resource": "git push --force*", "effect": "ask" },
@@ -155,5 +160,6 @@ That is expected: the installer writes plain JSON and keeps the original under
 ## Related documents
 
 - [`TEAM-PLAN.md`](TEAM-PLAN.md) — rollout and operating plan for both laptops.
+- [`SUBAGENTS.md`](SUBAGENTS.md) — delegation and the benchmark subagent standard.
 - [`../PROMPT.md`](../PROMPT.md) — copy-paste install/verification prompt.
 - [`../README.md`](../README.md) — package overview and options.

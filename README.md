@@ -139,8 +139,25 @@ node install.mjs
 - `rules/instructions/deployment-governance.md` — deployment allowlist, agent prohibitions, first-
   instantiation checklist.
 - `rules/instructions/team-development.md` — multi-machine roles, handoffs, state limitations.
+- `rules/instructions/subagent-orchestration.md` — delegation, benchmark standard, resource-pressure behavior.
+- `rules/agents/benchmark.md` — read-only global `benchmark` subagent.
 - `bin/agentctl.mjs` + `bin/agentops/*` — deterministic planning/verification/integration CLI.
 - `bin/orchestrator.mjs` — resource and worktree inventory helper.
+
+## Subagents and benchmarking
+
+Subagents are for independent, parallelizable work: exploration, review, docs, log triage and
+measurement. The parent verifies their output; subagent prose is not evidence.
+
+A global **`benchmark`** subagent is installed for performance/resource-sensitive work (latency,
+memory, bundle size, build/test duration, query plans, regressions). It is read-only, cannot push or
+deploy, and reports baseline/candidate, workload, metric, repetitions and spread. Use it whenever
+acceptance criteria depend on measured behavior; an implementer cannot self-certify its own benchmark.
+
+See [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md) for the dispatch contract and examples.
+
+Under resource pressure, a red level is **not a stop order**: continue with light work, dispatch light
+subagents, or pick another eligible task; defer heavy checks and retry later.
 
 ## Uninstall / rollback
 

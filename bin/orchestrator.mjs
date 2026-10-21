@@ -162,9 +162,9 @@ export function resourceAdvice({
   const moderateSlots = level === "red" ? 1 : level === "amber" ? 2 : Math.max(2, Math.min(4, Math.floor(cores / 2)));
   const advice =
     level === "red"
-      ? "Under pressure: light work only, or wait. Do not start a build, install or browser suite."
+      ? "Under pressure: continue with light work, dispatch light subagents, or pick another eligible task. Defer builds, installs and browser suites; do not stop unless no safe work remains."
       : level === "amber"
-        ? "Tight: one heavy job at a time, two moderate, light work in parallel."
+        ? "Tight: one heavy job at a time, two moderate, light work in parallel. Defer non-critical heavy jobs and retry later."
         : "Headroom: up to two heavy jobs, three or four moderate, light work in parallel.";
 
   return {
