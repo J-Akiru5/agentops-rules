@@ -8,12 +8,18 @@
  *   ~/.config/opencode/bin/agentctl.mjs + agentops/*.mjs -> AgentOps CLI
  *   ~/.config/opencode/opencode.jsonc            -> instructions + permission merge
  *
- * Non-destructive by default: every modified file is backed up under
- * <target>/.agentops/backups/<timestamp>/ before writing. Existing instruction content, config keys,
- * and permissions are preserved; managed entries are added once (idempotent).
+ * OpenCode V1 and V2 are both supported:
+ *   - V1 writes the `permission.shell` object (last match wins).
+ *   - V2 writes the ordered `permissions` array.
+ * The target is detected from `opencode --version`; override with --opencode v1|v2.
+ * A V2 `permissions` array is removed when installing for V1, and instruction entries are normalized
+ * to absolute paths so both versions resolve them deterministically.
+ *
+ * Non-destructive: modified files are backed up under <target>/.agentops/backups/<timestamp>/.
  *
  * Usage:
- *   node install.mjs [--target <dir>] [--dry-run] [--no-backup] [--run-tests]
+ *   node install.mjs [--target <dir>] [--opencode auto|v1|v2]
+ *                    [--dry-run] [--no-backup] [--run-tests]
  *
  * No network access, no secrets, no deployment side effects.
  */
@@ -37,11 +43,11 @@ const VERSION = (() => {
 const BEGIN = "<!-- BEGIN agentops-global (managed) -->";
 const END = "<!-- END agentops-global (managed) -->";
 
-const MANAGED_INSTRUCTIONS = [
-  "~/.config/opencode/instructions/autonomous-orchestration.md",
-  "~/.config/opencode/instructions/agentops-backbone.md",
-  "~/.config/opencode/instructions/deployment-governance.md",
-  "~/.config/opencode/instructions/team-development.md",
+const MANAGED_INSTRUCTION_FILES = [
+  "autonomous-orchestration.md",
+  "agentops-backbone.md",
+  "deployment-governance.md",
+  "team-development.md",
 ];
 
 const MANAGED_PERMISSIONS = [
@@ -196,10 +202,116 @@ function walkFiles(dir, base = dir) {
   return out;
 }
 
+/** Returns the generation of the `opencode` binary, or an explicit override. */
+function detectOpenCode(explicit) {
+  if (explicit === "v1" || explicit === "v2") {
+    return { generation: explicit, source: "explicit override", detected: false };
+  }
+  if (explicit && explicit !== "auto") fail(`--opencode must be auto, v1 or v2 (got ${explicit})`);
+
+  const attempts = [];
+  if (process.platform === "win32") {
+    attempts.push(["powershell", ["-NoProfile", "-Command", "opencode --version"]]);
+    attempts.push(["cmd", ["/c", "opencode --version"]]);
+    attempts.push(["cmd", ["/c", "opencode2 --version"]]);
+  } else {
+    attempts.push(["opencode", ["--version"]]);
+    attempts.push(["opencode2", ["--version"]]);
+  }
+  for (const [command, args] of attempts) {
+    const result = spawnSync(command, args, { encoding: "utf8", timeout: 20_000, windowsHide: true });
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    const match = /(?:^|\D)([12])\.\d+/.exec(output);
+    if (result.status === 0 && match) {
+      return {
+        generation: match[1] === "1" ? "v1" : "v2",
+        source: (result.stdout ?? "").trim() || output.trim(),
+        detected: true,
+      };
+    }
+  }
+  fail(
+    "Could not detect OpenCode. Run `opencode --version` (or `opencode2 --version`), then rerun with `--opencode v1` or `--opencode v2`.",
+  );
+  return { generation: "v2", source: "fallback", detected: false };
+}
+
+function managedInstructionPaths(target) {
+  return MANAGED_INSTRUCTION_FILES.map((name) =>
+    path.join(target, "instructions", name).split(path.sep).join("/"),
+  );
+}
+
+function isManagedInstructionEntry(entry) {
+  const normalized = String(entry).replaceAll("\\", "/");
+  return MANAGED_INSTRUCTION_FILES.some(
+    (name) => normalized.endsWith(`/instructions/${name}`) || normalized === `instructions/${name}`,
+  );
+}
+
+function mergeInstructions(config, target) {
+  const before = Array.isArray(config.instructions) ? config.instructions : [];
+  const kept = before.filter((entry) => !isManagedInstructionEntry(entry));
+  const managed = managedInstructionPaths(target);
+  config.instructions = [...kept, ...managed];
+  return { added: managed.length, removed: before.length - kept.length };
+}
+
+/** V1: `permission.shell` object; last matching pattern wins. */
+function applyV1Permissions(config) {
+  const permission = config.permission;
+  let base;
+  if (typeof permission === "string") base = { "*": permission };
+  else if (permission && typeof permission === "object" && !Array.isArray(permission)) base = { ...permission };
+  else base = {};
+
+  const hadPermissionsArray = Object.hasOwn(config, "permissions");
+  delete config.permissions;
+
+  if (base["*"] === "deny" || base.shell === "deny") {
+    config.permission = base;
+    return { rules: 0, hadPermissionsArray, skipped: "shell is denied by the existing config" };
+  }
+
+  let shell;
+  if (typeof base.shell === "string") shell = { "*": base.shell };
+  else if (base.shell && typeof base.shell === "object" && !Array.isArray(base.shell)) shell = { ...base.shell };
+  else shell = {};
+
+  const managedPatterns = new Set(MANAGED_PERMISSIONS.map((rule) => rule.resource));
+  const preserved = {};
+  for (const [pattern, action] of Object.entries(shell)) {
+    if (!managedPatterns.has(pattern)) preserved[pattern] = action;
+  }
+  const ordered = { ...preserved };
+  for (const rule of MANAGED_PERMISSIONS) ordered[rule.resource] = rule.effect;
+  config.permission = { ...base, shell: ordered };
+  return { rules: MANAGED_PERMISSIONS.length, hadPermissionsArray, skipped: null };
+}
+
+/** V2: ordered `permissions` array. */
+function applyV2Permissions(config) {
+  const permissions = Array.isArray(config.permissions) ? config.permissions : [];
+  let added = 0;
+  for (const rule of MANAGED_PERMISSIONS) {
+    const exists = permissions.some(
+      (entry) => entry && entry.action === rule.action && entry.resource === rule.resource && entry.effect === rule.effect,
+    );
+    if (!exists) {
+      permissions.push(rule);
+      added += 1;
+    }
+  }
+  config.permissions = permissions;
+  return { rules: MANAGED_PERMISSIONS.length, added, legacyPermission: Boolean(config.permission) };
+}
+
 function main() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help) {
-    console.log("usage: node install.mjs [--target <dir>] [--dry-run] [--no-backup] [--run-tests]");
+    console.log(
+      "usage: node install.mjs [--target <dir>] [--opencode auto|v1|v2] [--dry-run] [--no-backup] [--run-tests]",
+    );
     return;
   }
   const [major, minor] = process.versions.node.split(".").map(Number);
@@ -213,6 +325,7 @@ function main() {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupRoot = path.join(target, ".agentops", "backups", stamp);
   let backedUp = 0;
+  const opencode = detectOpenCode(flags.opencode ? String(flags.opencode) : "auto");
 
   if (!fs.existsSync(path.join(RULES_DIR, "AGENTS.md"))) fail("package is incomplete: rules/AGENTS.md missing");
   if (!fs.existsSync(path.join(RULES_DIR, "instructions", "team-development.md"))) {
@@ -262,10 +375,8 @@ function main() {
   } else if (!existingAgents.trim()) {
     agentsContent = `${block}\n`;
   } else if (existingAgents.trim() === managedAgents) {
-    // The file already contains exactly the managed rules: wrap it instead of duplicating.
     agentsContent = `${block}\n`;
   } else if (existingAgents.includes(managedAgents)) {
-    // Managed rules are part of a larger file: replace just that section.
     agentsContent = existingAgents.replace(managedAgents, block);
   } else {
     agentsContent = `${existingAgents.trimEnd()}\n\n${block}\n`;
@@ -285,30 +396,12 @@ function main() {
     copy(path.join(BIN_DIR, rel), path.join(target, "bin", rel));
   }
 
-  // 4. opencode.jsonc merge
+  // 4. Config merge, version-aware
   const config = structuredClone(existingConfig);
   if (!config.$schema) config.$schema = "https://opencode.ai/config.json";
-  const instructions = Array.isArray(config.instructions) ? config.instructions : [];
-  const addedInstructions = [];
-  for (const entry of MANAGED_INSTRUCTIONS) {
-    if (!instructions.includes(entry)) {
-      instructions.push(entry);
-      addedInstructions.push(entry);
-    }
-  }
-  config.instructions = instructions;
-  const permissions = Array.isArray(config.permissions) ? config.permissions : [];
-  const addedPermissions = [];
-  for (const rule of MANAGED_PERMISSIONS) {
-    const exists = permissions.some(
-      (entry) => entry && entry.action === rule.action && entry.resource === rule.resource && entry.effect === rule.effect,
-    );
-    if (!exists) {
-      permissions.push(rule);
-      addedPermissions.push(rule);
-    }
-  }
-  config.permissions = permissions;
+  const instructionMerge = mergeInstructions(config, target);
+  const permissionMerge =
+    opencode.generation === "v1" ? applyV1Permissions(config) : applyV2Permissions(config);
   write(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
   // 5. Verify the installed CLI behaves even without a repository.
@@ -318,9 +411,7 @@ function main() {
       cwd: target,
       timeout: 60_000,
     });
-    if (verify.status !== 0) {
-      fail(`installed agentctl failed to run: ${(verify.stderr || verify.stdout || "").slice(0, 500)}`);
-    }
+    if (verify.status !== 0) fail(`installed agentctl failed to run: ${(verify.stderr || verify.stdout || "").slice(0, 500)}`);
     try {
       readConfig(configPath);
     } catch {
@@ -330,12 +421,22 @@ function main() {
 
   console.log(`AgentOps global rules v${VERSION}${dryRun ? " (dry run)" : ""}`);
   console.log(`target: ${target}`);
-  console.log(`AGENTS.md: managed block ${existingAgents.includes(BEGIN) ? "updated" : "installed"}`);
-  console.log(`instructions: ${instructionFiles.length} file(s)`);
-  console.log(`agentctl: ${binFiles.length} file(s)`);
   console.log(
-    `opencode config: +${addedInstructions.length} instruction(s), +${addedPermissions.length} permission(s)${addedInstructions.length + addedPermissions.length === 0 ? " (already current)" : ""}`,
+    `OpenCode: ${opencode.generation}${opencode.detected ? ` (${String(opencode.source).split(/\r?\n/)[0]})` : " (forced)"}`,
   );
+  console.log(`AGENTS.md: managed block ${existingAgents.includes(BEGIN) ? "updated" : "installed"}`);
+  console.log(`instructions: ${instructionFiles.length} file(s) (${instructionMerge.removed} legacy path(s) replaced)`);
+  console.log(`agentctl: ${binFiles.length} file(s)`);
+  if (opencode.generation === "v1") {
+    console.log(
+      `permission: V1 shell rules (${permissionMerge.rules})${permissionMerge.hadPermissionsArray ? "; removed unsupported V2 permissions array" : ""}`,
+    );
+    if (permissionMerge.skipped) console.log(`permission note: ${permissionMerge.skipped}`);
+  } else {
+    console.log(
+      `permissions: V2 array (+${permissionMerge.added})${permissionMerge.legacyPermission ? "; existing V1 permission object left in place (deprecated)" : ""}`,
+    );
+  }
   if (backedUp > 0) console.log(`backups: ${backedUp} file(s) under ${backupRoot}`);
   else if (!dryRun && !noBackup) console.log("backups: none needed");
   if (dryRun) console.log("dry run: no files were written");

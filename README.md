@@ -11,7 +11,7 @@ machine from Git, non-destructively.
 
 - Node.js **22.5+** (uses `node:sqlite`; tested on Node 24)
 - Git
-- OpenCode V2
+- OpenCode **V1 or V2** (the installer detects the version; `--opencode v1|v2` overrides)
 - Windows (PowerShell or cmd) or macOS/Linux
 
 ## Install (each laptop)
@@ -30,6 +30,52 @@ Then **restart OpenCode** and start a fresh session. Confirm:
 
 If your config uses `opencode.json` instead of `opencode.jsonc`, the installer detects and updates it.
 `--target <dir>` installs into a custom OpenCode config directory (useful for testing).
+
+### Download instead of Git
+
+Download `agentops-rules.zip` from
+[Releases](https://github.com/J-Akiru5/agentops-rules/releases/latest), extract it, then run:
+
+```powershell
+node install.mjs
+```
+
+The repository is private; sign in to GitHub to download, or use `gh release download` as shown in
+`PROMPT.md`.
+
+### OpenCode V1 vs V2 (important)
+
+The installer runs `opencode --version` and writes the matching config format:
+
+- **V1** → `permission.shell` object (V1 does not support the V2 `permissions` array). Any legacy V2
+  `permissions` array is removed, so the error “V2 permissions are not supported by OpenCode V1”
+  disappears.
+- **V2** → ordered `permissions` array.
+
+Override detection when needed:
+
+```powershell
+node install.mjs --opencode v1   # opencode 1.x
+node install.mjs --opencode v2   # opencode2 / V2
+```
+
+The config format must match the binary you actually run. If `opencode` is V1 and `opencode2` is V2,
+pick one consistently: for V2 run `node install.mjs --opencode v2` and use `opencode2`. To replace the
+V1 `opencode` shim with V2:
+
+```powershell
+Remove-Item "$env:APPDATA\npm\opencode.ps1" -Force
+npm install -g @opencode/cli
+node install.mjs --opencode v2
+```
+
+Instruction entries are written as **absolute paths** in either mode, so V1 and V2 resolve the same
+files deterministically.
+
+### Copy-paste prompt
+
+See [`PROMPT.md`](PROMPT.md) for a prompt you can paste into OpenCode on the other machine. It
+downloads the release, runs the installer, reports the result, and verifies the rules.
 
 ## What the installer changes
 

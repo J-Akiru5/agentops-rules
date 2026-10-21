@@ -82,7 +82,7 @@ function tempTarget() {
 
 test("fresh install installs rules, CLI and config and passes a quick verify", () => {
   const target = tempTarget();
-  const result = install(["--target", target]);
+  const result = install(["--target", target, "--opencode", "v2"]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /AgentOps global rules/);
 
@@ -104,7 +104,7 @@ test("fresh install installs rules, CLI and config and passes a quick verify", (
 
   const config = readConfig(target);
   assert.equal(config.$schema, "https://opencode.ai/config.json");
-  assert.ok(config.instructions.includes("~/.config/opencode/instructions/team-development.md"));
+  assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/team-development.md")));
   assert.ok(
     config.permissions.some((entry) => entry.resource === "vercel deploy*" && entry.effect === "ask"),
     "deploy permission missing",
@@ -135,7 +135,7 @@ test("existing AGENTS.md, config keys and permissions are preserved; install is 
     "utf8",
   );
 
-  const first = install(["--target", target]);
+  const first = install(["--target", target, "--opencode", "v2"]);
   assert.equal(first.status, 0, first.stderr);
   const agents = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   assert.match(agents, /# Personal rules/);
@@ -147,7 +147,7 @@ test("existing AGENTS.md, config keys and permissions are preserved; install is 
   assert.ok(config.permissions.some((entry) => entry.resource === "custom command"));
   const managedCount = config.permissions.filter((entry) => entry.effect === "ask").length;
 
-  const second = install(["--target", target]);
+  const second = install(["--target", target, "--opencode", "v2"]);
   assert.equal(second.status, 0, second.stderr);
   const agentsAgain = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   assert.equal((agentsAgain.match(new RegExp(BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 1);
@@ -161,7 +161,7 @@ test("pre-existing identical rules are wrapped without duplication", () => {
   const target = tempTarget();
   fs.mkdirSync(target, { recursive: true });
   fs.copyFileSync(path.join(ROOT, "rules", "AGENTS.md"), path.join(target, "AGENTS.md"));
-  const result = install(["--target", target]);
+  const result = install(["--target", target, "--opencode", "v2"]);
   assert.equal(result.status, 0, result.stderr);
   const agents = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   assert.equal((agents.match(/Agent Waiting and Status Protocol/g) ?? []).length, 1);
@@ -170,7 +170,7 @@ test("pre-existing identical rules are wrapped without duplication", () => {
 
 test("dry run writes nothing", () => {
   const target = tempTarget();
-  const result = install(["--target", target, "--dry-run"]);
+  const result = install(["--target", target, "--opencode", "v2", "--dry-run"]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /dry run: no files were written/);
   assert.equal(fs.existsSync(path.join(target, "AGENTS.md")), false);
@@ -182,9 +182,48 @@ test("invalid existing config is refused before any write", () => {
   const target = tempTarget();
   fs.mkdirSync(target, { recursive: true });
   fs.writeFileSync(path.join(target, "opencode.jsonc"), "{ not valid json", "utf8");
-  const result = install(["--target", target]);
+  const result = install(["--target", target, "--opencode", "v2"]);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /cannot parse/);
   assert.equal(fs.existsSync(path.join(target, "AGENTS.md")), false);
   assert.equal(fs.existsSync(path.join(target, "instructions")), false);
 });
+
+test("V1 install writes permission.shell rules and removes the unsupported V2 permissions array", () => {
+  const target = tempTarget();
+  fs.mkdirSync(target, { recursive: true });
+  fs.writeFileSync(
+    path.join(target, "opencode.jsonc"),
+    `{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [{ "action": "shell", "resource": "legacy-v2", "effect": "allow" }],
+  "permission": { "shell": { "custom *": "allow" }, "edit": "ask" },
+  "instructions": ["~/.config/opencode/instructions/agentops-backbone.md"]
+}
+`,
+    "utf8",
+  );
+  const result = install(["--target", target, "--opencode", "v1"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /OpenCode: v1/);
+  const config = readConfig(target);
+  assert.equal(Object.hasOwn(config, "permissions"), false, "V2 permissions array must be removed for V1");
+  assert.equal(config.permission.edit, "ask");
+  assert.equal(config.permission.shell["custom *"], "allow");
+  assert.equal(config.permission.shell["vercel deploy*"], "ask");
+  assert.equal(config.permission.shell["git push --force*"], "ask");
+  assert.ok(config.instructions.every((entry) => !entry.includes("~/")));
+  assert.equal(config.instructions.filter((entry) => entry.includes("agentops-backbone.md")).length, 1);
+  assert.ok(config.instructions.some((entry) => /\/instructions\/agentops-backbone\.md$/.test(entry)));
+});
+
+test("V2 install keeps the ordered permissions array and absolute instruction paths", () => {
+  const target = tempTarget();
+  const result = install(["--target", target, "--opencode", "v2"]);
+  assert.equal(result.status, 0, result.stderr);
+  const config = readConfig(target);
+  assert.ok(Array.isArray(config.permissions));
+  assert.ok(config.permissions.some((entry) => entry.resource === "vercel deploy*" && entry.effect === "ask"));
+  assert.ok(config.instructions.every((entry) => entry.startsWith(target.replaceAll("\\", "/"))));
+});
+
