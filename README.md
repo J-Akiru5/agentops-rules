@@ -4,6 +4,11 @@ Portable OpenCode development protocol for the team: waiting/status discipline, 
 worktree orchestration, autonomous engineering, the planning backbone (`agentctl`), Vercel deployment
 governance, and multi-machine team coordination.
 
+**OpenCode 2 is the primary target (v1.2.0+).** V1 remains supported for legacy machines, but the
+installer detects the binary and migrates a V1 `permission` block to the V2 `permissions` array when
+you upgrade. Docs: [OpenCode 2 setup](docs/OPENCODE-2.md) · [Team plan](docs/TEAM-PLAN.md) ·
+[Copy-paste prompt](PROMPT.md).
+
 OpenCode does **not** sync global instructions through an account. This package installs them on each
 machine from Git, non-destructively.
 
@@ -47,16 +52,17 @@ The repository is private; sign in to GitHub to download, or use `gh release dow
 
 The installer runs `opencode --version` and writes the matching config format:
 
-- **V1** → `permission.shell` object (V1 does not support the V2 `permissions` array). Any legacy V2
-  `permissions` array is removed, so the error “V2 permissions are not supported by OpenCode V1”
+- **V2 (primary)** → ordered `permissions` array. If a V1 `permission` object exists, it is converted
+  into V2 rules and removed (backup kept).
+- **V1 (legacy)** → `permission.bash` + `permission.shell` objects (V1 has used both tool names). Any
+  V2 `permissions` array is removed, so the error “V2 permissions are not supported by OpenCode V1”
   disappears.
-- **V2** → ordered `permissions` array.
 
 Override detection when needed:
 
 ```powershell
-node install.mjs --opencode v1   # opencode 1.x
-node install.mjs --opencode v2   # opencode2 / V2
+node install.mjs --opencode v2   # opencode 2.x (recommended)
+node install.mjs --opencode v1   # legacy opencode 1.x
 ```
 
 The config format must match the binary you actually run. If `opencode` is V1 and `opencode2` is V2,
@@ -71,6 +77,9 @@ node install.mjs --opencode v2
 
 Instruction entries are written as **absolute paths** in either mode, so V1 and V2 resolve the same
 files deterministically.
+
+See [`docs/OPENCODE-2.md`](docs/OPENCODE-2.md) for the full OpenCode 2 upgrade and verification
+guide.
 
 ### Copy-paste prompt
 

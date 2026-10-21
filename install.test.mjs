@@ -189,7 +189,7 @@ test("invalid existing config is refused before any write", () => {
   assert.equal(fs.existsSync(path.join(target, "instructions")), false);
 });
 
-test("V1 install writes permission.shell rules and removes the unsupported V2 permissions array", () => {
+test("V1 install writes permission.bash/shell rules and removes the unsupported V2 permissions array", () => {
   const target = tempTarget();
   fs.mkdirSync(target, { recursive: true });
   fs.writeFileSync(
@@ -209,21 +209,59 @@ test("V1 install writes permission.shell rules and removes the unsupported V2 pe
   const config = readConfig(target);
   assert.equal(Object.hasOwn(config, "permissions"), false, "V2 permissions array must be removed for V1");
   assert.equal(config.permission.edit, "ask");
+  assert.equal(config.permission.bash["custom *"], "allow");
   assert.equal(config.permission.shell["custom *"], "allow");
+  assert.equal(config.permission.bash["vercel deploy*"], "ask");
   assert.equal(config.permission.shell["vercel deploy*"], "ask");
-  assert.equal(config.permission.shell["git push --force*"], "ask");
   assert.ok(config.instructions.every((entry) => !entry.includes("~/")));
   assert.equal(config.instructions.filter((entry) => entry.includes("agentops-backbone.md")).length, 1);
   assert.ok(config.instructions.some((entry) => /\/instructions\/agentops-backbone\.md$/.test(entry)));
 });
 
-test("V2 install keeps the ordered permissions array and absolute instruction paths", () => {
+test("V2 install converts a V1 permission object instead of leaving a deprecated block", () => {
   const target = tempTarget();
-  const result = install(["--target", target, "--opencode", "v2"]);
-  assert.equal(result.status, 0, result.stderr);
+  const v1 = install(["--target", target, "--opencode", "v1"]);
+  assert.equal(v1.status, 0, v1.stderr);
+
+  fs.writeFileSync(
+    path.join(target, "opencode.jsonc"),
+    JSON.stringify(
+      {
+        $schema: "https://opencode.ai/config.json",
+        permission: {
+          bash: { "custom *": "allow", "danger *": "deny" },
+          edit: "ask",
+        },
+        instructions: ["~/.config/opencode/instructions/team-development.md"],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const v2 = install(["--target", target, "--opencode", "v2"]);
+  assert.equal(v2.status, 0, v2.stderr);
   const config = readConfig(target);
+  assert.equal(Object.hasOwn(config, "permission"), false, "V1 permission must be migrated, not kept");
   assert.ok(Array.isArray(config.permissions));
-  assert.ok(config.permissions.some((entry) => entry.resource === "vercel deploy*" && entry.effect === "ask"));
-  assert.ok(config.instructions.every((entry) => entry.startsWith(target.replaceAll("\\", "/"))));
+  assert.ok(
+    config.permissions.some(
+      (entry) => entry.action === "shell" && entry.resource === "custom *" && entry.effect === "allow",
+    ),
+  );
+  assert.ok(
+    config.permissions.some(
+      (entry) => entry.action === "shell" && entry.resource === "danger *" && entry.effect === "deny",
+    ),
+  );
+  assert.ok(config.permissions.some((entry) => entry.action === "edit" && entry.effect === "ask"));
+  assert.ok(config.permissions.some((entry) => entry.action === "shell" && entry.resource === "vercel deploy*"));
+  assert.deepEqual(config.instructions, [
+    path.join(target, "instructions", "autonomous-orchestration.md").replaceAll("\\", "/"),
+    path.join(target, "instructions", "agentops-backbone.md").replaceAll("\\", "/"),
+    path.join(target, "instructions", "deployment-governance.md").replaceAll("\\", "/"),
+    path.join(target, "instructions", "team-development.md").replaceAll("\\", "/"),
+  ]);
 });
 

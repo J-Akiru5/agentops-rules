@@ -257,7 +257,7 @@ function mergeInstructions(config, target) {
   return { added: managed.length, removed: before.length - kept.length };
 }
 
-/** V1: `permission.shell` object; last matching pattern wins. */
+/** V1: `permission.bash`/`permission.shell` object; last matching pattern wins. */
 function applyV1Permissions(config) {
   const permission = config.permission;
   let base;
@@ -268,30 +268,77 @@ function applyV1Permissions(config) {
   const hadPermissionsArray = Object.hasOwn(config, "permissions");
   delete config.permissions;
 
-  if (base["*"] === "deny" || base.shell === "deny") {
-    config.permission = base;
-    return { rules: 0, hadPermissionsArray, skipped: "shell is denied by the existing config" };
-  }
+  const asMap = (value) => {
+    if (typeof value === "string") return { "*": value };
+    if (value && typeof value === "object" && !Array.isArray(value)) return { ...value };
+    return {};
+  };
+  const bash = asMap(base.bash);
+  const shell = asMap(base.shell);
 
-  let shell;
-  if (typeof base.shell === "string") shell = { "*": base.shell };
-  else if (base.shell && typeof base.shell === "object" && !Array.isArray(base.shell)) shell = { ...base.shell };
-  else shell = {};
+  if (base["*"] === "deny" || bash["*"] === "deny" || shell["*"] === "deny") {
+    const preserved = { ...base };
+    if (Object.keys(bash).length > 0) preserved.bash = bash;
+    if (Object.keys(shell).length > 0) preserved.shell = shell;
+    config.permission = preserved;
+    return { rules: 0, hadPermissionsArray, skipped: "shell/bash is denied by the existing config" };
+  }
 
   const managedPatterns = new Set(MANAGED_PERMISSIONS.map((rule) => rule.resource));
-  const preserved = {};
-  for (const [pattern, action] of Object.entries(shell)) {
-    if (!managedPatterns.has(pattern)) preserved[pattern] = action;
+  const combined = {};
+  for (const [pattern, action] of Object.entries(bash)) {
+    if (!managedPatterns.has(pattern)) combined[pattern] = action;
   }
-  const ordered = { ...preserved };
-  for (const rule of MANAGED_PERMISSIONS) ordered[rule.resource] = rule.effect;
-  config.permission = { ...base, shell: ordered };
+  for (const [pattern, action] of Object.entries(shell)) {
+    if (!managedPatterns.has(pattern)) combined[pattern] = action;
+  }
+  for (const rule of MANAGED_PERMISSIONS) combined[rule.resource] = rule.effect;
+  // V1 variants have used both `bash` and `shell`; write both so either resolves the rules.
+  config.permission = { ...base, bash: { ...combined }, shell: { ...combined } };
   return { rules: MANAGED_PERMISSIONS.length, hadPermissionsArray, skipped: null };
 }
 
-/** V2: ordered `permissions` array. */
+/** Converts a V1 permission object into V2 ordered rules (best effort). */
+function v1ToV2Rules(permission) {
+  if (!permission || typeof permission !== "object" || Array.isArray(permission)) return [];
+  const rules = [];
+  for (const [tool, value] of Object.entries(permission)) {
+    const action = tool === "bash" ? "shell" : tool;
+    if (typeof value === "string") {
+      if (["allow", "ask", "deny"].includes(value)) rules.push({ action, resource: "*", effect: value });
+      continue;
+    }
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      for (const [pattern, effect] of Object.entries(value)) {
+        if (["allow", "ask", "deny"].includes(effect)) rules.push({ action, resource: pattern, effect });
+      }
+    }
+  }
+  return rules;
+}
+
+/** V2: ordered `permissions` array; migrates a V1 `permission` object and removes it. */
 function applyV2Permissions(config) {
-  const permissions = Array.isArray(config.permissions) ? config.permissions : [];
+  const permissions = Array.isArray(config.permissions) ? [...config.permissions] : [];
+  let migrated = 0;
+  let legacyKept = false;
+  if (Object.hasOwn(config, "permission")) {
+    if (config.permission && typeof config.permission === "object" && !Array.isArray(config.permission)) {
+      for (const rule of v1ToV2Rules(config.permission)) {
+        const exists = permissions.some(
+          (entry) => entry && entry.action === rule.action && entry.resource === rule.resource && entry.effect === rule.effect,
+        );
+        if (!exists) {
+          permissions.push(rule);
+          migrated += 1;
+        }
+      }
+      delete config.permission;
+    } else {
+      // A global string action cannot be mapped faithfully; keep it (V2 accepts the deprecated field).
+      legacyKept = true;
+    }
+  }
   let added = 0;
   for (const rule of MANAGED_PERMISSIONS) {
     const exists = permissions.some(
@@ -303,7 +350,7 @@ function applyV2Permissions(config) {
     }
   }
   config.permissions = permissions;
-  return { rules: MANAGED_PERMISSIONS.length, added, legacyPermission: Boolean(config.permission) };
+  return { rules: MANAGED_PERMISSIONS.length, added, migrated, legacyKept };
 }
 
 function main() {
@@ -434,7 +481,7 @@ function main() {
     if (permissionMerge.skipped) console.log(`permission note: ${permissionMerge.skipped}`);
   } else {
     console.log(
-      `permissions: V2 array (+${permissionMerge.added})${permissionMerge.legacyPermission ? "; existing V1 permission object left in place (deprecated)" : ""}`,
+      `permissions: V2 array (+${permissionMerge.added})${permissionMerge.migrated ? `; migrated ${permissionMerge.migrated} V1 rule(s)` : ""}${permissionMerge.legacyKept ? "; global V1 permission string kept (deprecated)" : ""}`,
     );
   }
   if (backedUp > 0) console.log(`backups: ${backedUp} file(s) under ${backupRoot}`);
