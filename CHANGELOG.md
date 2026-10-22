@@ -11,6 +11,7 @@
 - **Release gate**: `scripts/release-check.mjs` validates `package.json`/`VERSION`/tag/changelog/docs;
   `scripts/release-notes.mjs` extracts notes from the changelog.
 - **6 instructions / 27 permissions** expected after reinstall; no breaking installer or state change.
+- **Fixed** Windows 8.3 short-path canonicalization in worktree isolation checks (CI parity).
 
 ## 1.4.0 — 2026-10-22
 

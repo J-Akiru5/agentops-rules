@@ -188,7 +188,22 @@ function registeredWorktrees(repo) {
   return text
     .split(/\r?\n/)
     .filter((line) => line.startsWith("worktree "))
-    .map((line) => path.resolve(line.slice("worktree ".length)));
+    .map((line) => canonicalPath(line.slice("worktree ".length)));
+}
+
+/** Canonicalizes Windows 8.3/short paths and symlinks for reliable comparisons. */
+function canonicalPath(target) {
+  try {
+    return fs.realpathSync.native(path.resolve(target));
+  } catch {
+    return path.resolve(target);
+  }
+}
+
+function samePath(a, b) {
+  const left = canonicalPath(a);
+  const right = canonicalPath(b);
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
 }
 
 function activeClaimOnPath(db, worktree, taskId) {
@@ -196,7 +211,7 @@ function activeClaimOnPath(db, worktree, taskId) {
   const rows = db
     .prepare("SELECT task_id, agent, worktree FROM claims WHERE released_at IS NULL AND expires_at > ?")
     .all(now);
-  return rows.find((row) => row.worktree && path.resolve(row.worktree) === path.resolve(worktree) && row.task_id !== taskId);
+  return rows.find((row) => row.worktree && samePath(row.worktree, worktree) && row.task_id !== taskId);
 }
 
 function ownershipOverlaps(db, taskId, ownership) {
@@ -467,12 +482,12 @@ function cmdClaim(ctx) {
   if (args.flags.worktree) {
     worktree = path.resolve(String(args.flags.worktree));
     if (worktreePolicy.require_isolated_claim) {
-      if (worktree === repoRoot) {
+      if (samePath(worktree, repoRoot)) {
         throw new Refusal(
           "the primary worktree cannot be claimed; omit --worktree to auto-create an isolated one, or pass a task worktree",
         );
       }
-      if (!registeredWorktrees(repo).some((entry) => path.resolve(entry) === worktree)) {
+      if (!registeredWorktrees(repo).some((entry) => samePath(entry, worktree))) {
         throw new Refusal(`worktree is not registered with this repository: ${worktree}`);
       }
       const dirty = tryGit(worktree, ["status", "--porcelain"]);
