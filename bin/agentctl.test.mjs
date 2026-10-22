@@ -63,7 +63,15 @@ function assertRefused(result, label, pattern = null) {
   return result;
 }
 
-function writePolicy(repo) {
+function writePolicy(repo, worktreePolicy = null) {
+  const wt = {
+    root: "../wt",
+    branch_prefix: "feature",
+    base: "origin/develop",
+    auto_create: false,
+    require_isolated_claim: false,
+    ...(worktreePolicy ?? {}),
+  };
   return `version: 1
 
 integration:
@@ -131,6 +139,13 @@ database:
   lease_minutes: 30
   resource_class: light
 
+worktree:
+  root: ${wt.root}
+  branch_prefix: ${wt.branch_prefix}
+  base: ${wt.base}
+  auto_create: ${wt.auto_create}
+  require_isolated_claim: ${wt.require_isolated_claim}
+
 cleanup:
   require_apply_flag: true
 `;
@@ -184,7 +199,7 @@ Fixture contract.
 `;
 }
 
-function scaffoldPlan(repo, { tasks = null } = {}) {
+function scaffoldPlan(repo, { tasks = null, worktreePolicy = null } = {}) {
   const plan = path.join(repo, "plan");
   fs.mkdirSync(path.join(plan, "milestones"), { recursive: true });
   fs.mkdirSync(path.join(plan, "tasks"), { recursive: true });
@@ -193,7 +208,7 @@ function scaffoldPlan(repo, { tasks = null } = {}) {
   fs.mkdirSync(path.join(repo, "knowledge", "decisions"), { recursive: true });
   fs.mkdirSync(path.join(repo, "scripts", "agentops"), { recursive: true });
   fs.writeFileSync(path.join(plan, "PROJECT.md"), "# Fixture project\n", "utf8");
-  fs.writeFileSync(path.join(plan, "policy.yaml"), writePolicy(repo), "utf8");
+  fs.writeFileSync(path.join(plan, "policy.yaml"), writePolicy(repo, worktreePolicy), "utf8");
   fs.writeFileSync(
     path.join(plan, "milestones", "M01-fixture.md"),
     '---\nid: M01\ntitle: "Fixture milestone"\nstatus: active\nowner: human\n---\n\n# Fixture milestone\n',
@@ -229,14 +244,14 @@ function scaffoldPlan(repo, { tasks = null } = {}) {
   fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Fixture agent rules\n", "utf8");
 }
 
-function makeRepo({ remote = true, tasks = null } = {}) {
+function makeRepo({ remote = true, tasks = null, worktreePolicy = null } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentops-test-"));
   const repo = path.join(root, "repo");
   fs.mkdirSync(repo);
   git(repo, ["init", "-b", "develop"]);
   git(repo, ["config", "user.email", "agentops-tests@example.local"]);
   git(repo, ["config", "user.name", "AgentOps Tests"]);
-  scaffoldPlan(repo, { tasks });
+  scaffoldPlan(repo, { tasks, worktreePolicy });
   fs.writeFileSync(path.join(repo, "work.txt"), "base\n", "utf8");
   git(repo, ["add", "-A"]);
   git(repo, ["commit", "-m", "chore: fixture plan"]);
@@ -474,6 +489,82 @@ test("stale plan read: checkout edits do not change the authoritative develop vi
     assert.doesNotMatch(fromDevelop.stdout, /LOCAL UNCOMMITTED EDIT/);
     const fromWorktree = assertOk(agentctl(fixture.repo, ["plan", "show", "--file", "plan/PROJECT.md", "--plan-source", "worktree"]), "worktree read");
     assert.match(fromWorktree.stdout, /LOCAL UNCOMMITTED EDIT/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("claim auto-creates an isolated worktree by default", () => {
+  const fixture = makeRepo({
+    tasks: [["T-0011", {}]],
+    worktreePolicy: { auto_create: true, require_isolated_claim: true, root: "../wt" },
+  });
+  try {
+    assertOk(agentctl(fixture.repo, ["plan", "sync"]), "sync");
+    const result = assertOk(agentctl(fixture.repo, ["claim", "T-0011", "--agent", "impl-1", "--json"]), "claim");
+    const claim = JSON.parse(result.stdout);
+    assert.equal(claim.created, true, "claim should report the created worktree");
+    assert.ok(fs.existsSync(claim.worktree));
+    assert.notEqual(path.resolve(claim.worktree), path.resolve(fixture.repo));
+    const branch = execFileSync("git", ["-C", claim.worktree, "rev-parse", "--abbrev-ref", "HEAD"], {
+      encoding: "utf8",
+    }).trim();
+    assert.equal(branch, claim.branch);
+    assert.match(claim.branch, /^feature\/t-0011-/);
+    const worktreeList = execFileSync("git", ["-C", fixture.repo, "worktree", "list", "--porcelain"], {
+      encoding: "utf8",
+    }).replaceAll("\\", "/");
+    assert.ok(worktreeList.includes(claim.worktree.replaceAll("\\", "/")), "worktree must be registered");
+    const status = statusOf(fixture.repo);
+    const task = status.tasks.find((row) => row.id === "T-0011");
+    assert.equal(task.worktree, claim.worktree);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("claim refuses primary, unregistered, dirty or already-claimed worktrees", () => {
+  const fixture = makeRepo({
+    tasks: [["T-0012", {}]],
+    worktreePolicy: { auto_create: false, require_isolated_claim: true },
+  });
+  try {
+    assertOk(agentctl(fixture.repo, ["plan", "sync"]), "sync");
+    assertRefused(
+      agentctl(fixture.repo, ["claim", "T-0012", "--agent", "impl-1", "--worktree", fixture.repo, "--branch", "feature/primary"]),
+      "primary worktree",
+      /primary worktree/,
+    );
+
+    const unregistered = path.join(fixture.root, "not-a-worktree");
+    fs.mkdirSync(unregistered);
+    assertRefused(
+      agentctl(fixture.repo, ["claim", "T-0012", "--agent", "impl-1", "--worktree", unregistered, "--branch", "feature/unregistered"]),
+      "unregistered worktree",
+      /not registered/,
+    );
+
+    const dirtyTree = path.join(fixture.root, "wt-dirty");
+    git(fixture.repo, ["worktree", "add", dirtyTree, "-b", "feature/dirty", "develop"]);
+    fs.writeFileSync(path.join(dirtyTree, "uncommitted.txt"), "precious\n");
+    assertRefused(
+      agentctl(fixture.repo, ["claim", "T-0012", "--agent", "impl-1", "--worktree", dirtyTree]),
+      "dirty worktree",
+      /uncommitted changes/,
+    );
+
+    const cleanTree = path.join(fixture.root, "wt-clean");
+    git(fixture.repo, ["worktree", "add", cleanTree, "-b", "feature/clean", "develop"]);
+    const claimed = assertOk(
+      agentctl(fixture.repo, ["claim", "T-0012", "--agent", "impl-1", "--worktree", cleanTree]),
+      "clean isolated worktree",
+    );
+    assert.match(claimed.stdout, /claimed T-0012/);
+    assertRefused(
+      agentctl(fixture.repo, ["claim", "T-0012", "--agent", "impl-2", "--worktree", cleanTree]),
+      "already claimed",
+      /is claimed|already claimed/,
+    );
   } finally {
     fixture.cleanup();
   }

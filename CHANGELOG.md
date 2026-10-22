@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.0 — 2026-10-22
+
+- **Automatic worktree instantiation**: `agentctl claim` creates an isolated worktree and task branch
+  by default from `worktree.root` / `branch_prefix` / `base` in `plan/policy.yaml`.
+- **Isolation enforcement**: claims refuse the primary worktree, unregistered paths, dirty worktrees,
+  branch mismatches, and worktrees already claimed by another task.
+- **Flags/overrides**: `--create`, `--no-create`, and clean registered `--worktree`; auto-create
+  defaults are on, with a policy switch for deliberate manual management.
+- **Docs**: `docs/WORKTREES.md` covers policy, claim behavior, isolation, session move, cleanup and
+  big-feature decomposition. Global rules, team plan and README updated.
+- **Tests**: auto-create path/branch/registration, primary/unregistered/dirty/already-claimed refusal,
+  and existing cleanup behavior.
+
 ## 1.3.0 — 2026-10-22
 
 - **Resource pressure is a deferral, not a stop order.** Red/amber levels continue with light work,

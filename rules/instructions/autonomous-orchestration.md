@@ -23,9 +23,12 @@ When the task is clear and the actions are authorized, reversible and inside the
   replacing it.
 - Form an executable plan with acceptance criteria, then implement it. Do not stop at a plan when the
   plan is executable, and do not present a proposal as completed work.
-- Isolate the work: one task, one worktree, one branch, named after the task. Reuse an existing
-  worktree only after confirming it is yours and idle; never reset, clean or overwrite someone
-  else's.
+- Isolate the work: one task, one worktree, one branch, named after the task. `agentctl claim`
+  auto-creates the worktree and branch by default and refuses the primary, dirty, unregistered or
+  foreign-claimed worktree. Move the session there (or use absolute paths); never implement in the
+  primary checkout. Reuse an existing worktree only when it is yours, clean and idle.
+- Split a big feature into task contracts: one worktree per task, integrated incrementally. Avoid one
+  long-lived mega-worktree or a single branch carrying unrelated work.
 - Write tests with the change; run focused checks first, then the repository's full gate.
 - Diagnose and repair ordinary failures yourself, with a bounded number of evidence-based attempts.
 - Review the diff before claiming completion.

@@ -27,7 +27,8 @@ repository. It extends the other global rules; it does not replace them.
 ## Task flow
 
 1. Fetch `origin/develop`; run `agentctl plan sync` so the contract comes from the authoritative ref.
-2. Work in an isolated worktree on a task branch owned by that task.
+2. `agentctl claim` auto-creates an isolated worktree and branch on this machine (or pass a clean,
+   registered `--worktree`). Move the session there; do not implement in the primary checkout.
 3. Run the contract's verification profile locally; commit and push the task branch.
 4. Submit/integrate on the designated integrator machine (or use the repository's PR workflow).
 5. The integrator verifies the candidate and pushes `develop`.

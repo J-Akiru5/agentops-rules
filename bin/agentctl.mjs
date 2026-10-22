@@ -172,6 +172,33 @@ function yamlString(value) {
   return JSON.stringify(String(value ?? ""));
 }
 
+function slugify(value) {
+  return (
+    String(value ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40)
+      .replace(/-+$/g, "") || "task"
+  );
+}
+
+function registeredWorktrees(repo) {
+  const text = tryGit(repo, ["worktree", "list", "--porcelain"]) ?? "";
+  return text
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("worktree "))
+    .map((line) => path.resolve(line.slice("worktree ".length)));
+}
+
+function activeClaimOnPath(db, worktree, taskId) {
+  const now = nowIso();
+  const rows = db
+    .prepare("SELECT task_id, agent, worktree FROM claims WHERE released_at IS NULL AND expires_at > ?")
+    .all(now);
+  return rows.find((row) => row.worktree && path.resolve(row.worktree) === path.resolve(worktree) && row.task_id !== taskId);
+}
+
 function ownershipOverlaps(db, taskId, ownership) {
   const now = nowIso();
   const rows = db
@@ -399,7 +426,11 @@ function cmdTask(ctx) {
 function cmdClaim(ctx) {
   const { repo, db, args } = ctx;
   const id = args.positional[1];
-  if (!id) throw new UsageError("usage: agentctl claim <T-0000> --agent <id> [--worktree <path>] [--branch <name>]");
+  if (!id) {
+    throw new UsageError(
+      "usage: agentctl claim <T-0000> --agent <id> [--worktree <path>] [--branch <name>] [--create|--no-create]",
+    );
+  }
   const agent = agentOf(args.flags);
   const plan = resolvePlan(repo, args.flags);
   failPlan(plan);
@@ -423,20 +454,126 @@ function cmdClaim(ctx) {
       `ownership overlaps an active claim:\n${overlaps.map((row) => `  - ${row.task}: ${row.mine} vs ${row.theirs}`).join("\n")}`,
     );
   }
-  const branch = String(args.flags.branch ?? currentBranch(repo));
+  if (args.flags.worktree && args.flags.create) {
+    throw new UsageError("use either --worktree <path> or --create, not both");
+  }
+  const worktreePolicy = plan.policy.worktree ?? {};
+  const repoRoot = path.resolve(repo);
+  let worktree;
+  let branch;
+  let created = false;
+  let baseCommit = null;
+
+  if (args.flags.worktree) {
+    worktree = path.resolve(String(args.flags.worktree));
+    if (worktreePolicy.require_isolated_claim) {
+      if (worktree === repoRoot) {
+        throw new Refusal(
+          "the primary worktree cannot be claimed; omit --worktree to auto-create an isolated one, or pass a task worktree",
+        );
+      }
+      if (!registeredWorktrees(repo).some((entry) => path.resolve(entry) === worktree)) {
+        throw new Refusal(`worktree is not registered with this repository: ${worktree}`);
+      }
+      const dirty = tryGit(worktree, ["status", "--porcelain"]);
+      if (dirty === null) throw new Refusal(`cannot inspect worktree status: ${worktree}`);
+      if (dirty !== "") throw new Refusal(`worktree has uncommitted changes; commit or stash them first: ${worktree}`);
+      const actualBranch = currentBranch(worktree);
+      if (args.flags.branch && String(args.flags.branch) !== actualBranch) {
+        throw new Refusal(`worktree is on branch ${actualBranch}, not ${args.flags.branch}`);
+      }
+      const claimedHere = activeClaimOnPath(db, worktree, id);
+      if (claimedHere) {
+        throw new Refusal(`worktree is already claimed by ${claimedHere.task_id}@${claimedHere.agent}: ${worktree}`);
+      }
+      branch = actualBranch;
+    } else {
+      branch = String(args.flags.branch ?? currentBranch(repo));
+    }
+  } else {
+    const shouldCreate = args.flags.create || (worktreePolicy.auto_create && !args.flags["no-create"]);
+    if (!shouldCreate) {
+      if (worktreePolicy.require_isolated_claim) {
+        throw new Refusal(
+          "no worktree supplied and auto_create is disabled; use --create or --worktree <isolated path>",
+        );
+      }
+      worktree = repoRoot;
+      branch = String(args.flags.branch ?? currentBranch(repo));
+    } else {
+      const root = path.resolve(repo, String(worktreePolicy.root ?? "../worktrees"));
+      fs.mkdirSync(root, { recursive: true });
+      worktree = path.join(root, `${path.basename(repo)}-${id}`);
+      branch = String(
+        args.flags.branch ??
+          `${worktreePolicy.branch_prefix ?? "feature"}/${id.toLowerCase()}-${slugify(contract.title)}`,
+      );
+      if (
+        (plan.policy.integration.protected_branches ?? []).includes(branch) ||
+        branch === plan.policy.integration.target_branch
+      ) {
+        throw new Refusal(`branch ${branch} is protected or the integration target; choose a task branch`);
+      }
+      if (fs.existsSync(worktree)) throw new Refusal(`worktree path already exists: ${worktree}`);
+      if (tryGit(repo, ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`]) !== null) {
+        throw new Refusal(`branch ${branch} already exists; choose another branch or worktree`);
+      }
+      const baseRef = String(worktreePolicy.base ?? "origin/develop");
+      baseCommit = tryGit(repo, ["rev-parse", baseRef]);
+      if (!baseCommit) throw new Refusal(`base ${baseRef} is not available; run agentctl plan sync`);
+      try {
+        git(repo, ["worktree", "add", "-b", branch, worktree, baseCommit]);
+      } catch (error) {
+        throw new Refusal(`worktree creation failed: ${error.message.split(/\r?\n/)[0]}`);
+      }
+      const actualBranch = currentBranch(worktree);
+      if (actualBranch !== branch) {
+        throw new Refusal(`created worktree is on ${actualBranch}, expected ${branch}`);
+      }
+      created = true;
+    }
+  }
+
   if ((plan.policy.integration.protected_branches ?? []).includes(branch) || branch === plan.policy.integration.target_branch) {
     throw new Refusal(`branch ${branch} is protected or the integration target; create a task branch first`);
   }
-  const worktree = path.resolve(String(args.flags.worktree ?? repo));
-  const base = tryGit(repo, ["rev-parse", "origin/develop"]) ?? tryGit(repo, ["rev-parse", "develop"]);
-  if (!base) throw new Refusal("cannot resolve the base branch; run agentctl plan sync");
+  if (!baseCommit) {
+    baseCommit =
+      tryGit(repo, ["rev-parse", String(worktreePolicy.base ?? "origin/develop")]) ??
+      tryGit(repo, ["rev-parse", "develop"]);
+  }
+  if (!baseCommit) throw new Refusal("cannot resolve the base branch; run agentctl plan sync");
+
   const leaseSeconds = Number(args.flags["lease-seconds"] ?? (plan.policy.claims?.lease_minutes ?? 15) * 60);
-  const claim = claimTask(db, { taskId: id, agent, worktree, branch, baseCommit: base, leaseSeconds });
+  let claim;
+  try {
+    claim = claimTask(db, { taskId: id, agent, worktree, branch, baseCommit, leaseSeconds });
+  } catch (error) {
+    if (created) {
+      tryGit(repo, ["worktree", "remove", worktree]);
+      tryGit(repo, ["branch", "-D", branch]);
+    }
+    throw error;
+  }
   ackContract(db, id, agent, contract.rev);
+  const lines = [
+    `claimed ${id} as ${agent}`,
+    `  fence: ${claim.fence}`,
+    `  lease: ${claim.expiresAt}`,
+    `  worktree: ${worktree}`,
+    `  branch: ${branch}`,
+    `  base: ${baseCommit.slice(0, 8)}`,
+  ];
+  if (created) {
+    lines.push(
+      "  created isolated worktree",
+      "  next: move the session there (host worktree/session tool) or use this path explicitly; do not edit the primary worktree",
+    );
+  }
   print(
-    { task: id, agent, ...claim, worktree, branch, base },
+    { task: id, agent, ...claim, worktree, branch, base: baseCommit, created },
     args.flags.json,
-    `claimed ${id} as ${agent}\n  fence: ${claim.fence}\n  lease: ${claim.expiresAt}\n  worktree: ${worktree}\n  branch: ${branch}\n  base: ${base.slice(0, 8)}`,
+    lines.join("\n"),
   );
   return EXIT.OK;
 }
@@ -1056,6 +1193,7 @@ function cmdStatus(ctx) {
       owner: task.owner_agent,
       lease: task.lease_expires_at,
       blocked: task.blocked_reason ?? null,
+      worktree: task.worktree ?? null,
       integrated: task.integrated_commit,
     })),
     claims,

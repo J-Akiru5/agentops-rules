@@ -161,5 +161,6 @@ That is expected: the installer writes plain JSON and keeps the original under
 
 - [`TEAM-PLAN.md`](TEAM-PLAN.md) — rollout and operating plan for both laptops.
 - [`SUBAGENTS.md`](SUBAGENTS.md) — delegation and the benchmark subagent standard.
+- [`WORKTREES.md`](WORKTREES.md) — automatic worktree instantiation, isolation and cleanup.
 - [`../PROMPT.md`](../PROMPT.md) — copy-paste install/verification prompt.
 - [`../README.md`](../README.md) — package overview and options.

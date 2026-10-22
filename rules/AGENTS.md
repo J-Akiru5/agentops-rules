@@ -66,6 +66,16 @@ The objective is to:
 
 **Never sacrifice existing work to achieve a clean branch or working directory.**
 
+## Worktree instantiation and isolation
+
+`agentctl claim <T-0000> --agent <id>` creates the task worktree and branch by default using the
+policy `worktree` settings (`root`, `branch_prefix`, `base`, `auto_create`, `require_isolated_claim`).
+It refuses the primary worktree, unregistered or dirty worktrees, a branch mismatch, and worktrees
+already claimed by another task. After creation, move the session to the new worktree with the host's
+worktree/session tool or use that path explicitly; never implement in the primary checkout. If
+auto-create is disabled, pass `--create` or a clean isolated `--worktree`. Split a large feature into
+task contracts rather than keeping one long-lived mega-worktree.
+
 ## 2. Worktree Discovery Is Mandatory
 
 Before performing cross-branch reconciliation, cleanup, or other operations that may affect multiple worktrees, inspect the actual local Git environment.

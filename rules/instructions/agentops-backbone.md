@@ -21,9 +21,13 @@ this file. Follow the stricter, more specific rule; if two rules genuinely confl
 
 1. `agentctl plan sync` — fetch origin and refresh contracts into state.
 2. `agentctl task show <T-0000>` — read objective, acceptance criteria, ownership, dependencies.
-3. `agentctl claim <T-0000> --agent <id> --worktree <path> --branch <task-branch>` — atomic, leased
-   and fenced. Only `ready` tasks whose dependencies are integrated can be claimed.
-4. Work only in your own worktree. Never edit another agent's worktree or mutate `develop` directly.
+3. `agentctl claim <T-0000> --agent <id>` — auto-creates an isolated worktree and branch from the
+   policy base (`worktree.auto_create`), then atomically claims it. Pass `--worktree <path>` to use an
+   existing clean, registered task worktree, or `--create` / `--no-create` to override policy. Only
+   `ready` tasks whose dependencies are integrated can be claimed.
+4. Work only in the worktree printed by the claim. Never edit another agent's worktree or mutate
+   `develop` directly. Move the session to the printed path (host worktree/session tool) or use
+   absolute paths.
 5. `agentctl journal <T> -m "..."` and `agentctl checkpoint <T> --push` at milestones. Checkpoints
    renew the lease and refuse when the contract revision is not acknowledged.
 6. `agentctl verify <T> [--profile]` — runs the contract profile under a resource reservation and

@@ -106,6 +106,13 @@ export const DEFAULT_POLICY = {
       "packages/**",
     ],
   },
+  worktree: {
+    root: "../worktrees",
+    branch_prefix: "feature",
+    base: "origin/develop",
+    auto_create: true,
+    require_isolated_claim: true,
+  },
   cleanup: { require_apply_flag: true },
   reports: { directory: null },
 };
@@ -281,6 +288,17 @@ export function validatePolicy(policy) {
   }
   if (!Array.isArray(deployment.sensitive_paths) || deployment.sensitive_paths.length === 0) {
     errors.push("policy.deployment.sensitive_paths must be a non-empty list");
+  }
+  const worktree = policy?.worktree ?? {};
+  for (const key of ["root", "branch_prefix", "base"]) {
+    if (typeof worktree[key] !== "string" || worktree[key].trim() === "") {
+      errors.push(`policy.worktree.${key} must be a non-empty string`);
+    }
+  }
+  for (const key of ["auto_create", "require_isolated_claim"]) {
+    if (typeof worktree[key] !== "boolean") {
+      errors.push(`policy.worktree.${key} must be true or false`);
+    }
   }
   return errors;
 }

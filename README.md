@@ -7,7 +7,7 @@ governance, and multi-machine team coordination.
 **OpenCode 2 is the primary target (v1.2.0+).** V1 remains supported for legacy machines, but the
 installer detects the binary and migrates a V1 `permission` block to the V2 `permissions` array when
 you upgrade. Docs: [OpenCode 2 setup](docs/OPENCODE-2.md) · [Team plan](docs/TEAM-PLAN.md) ·
-[Copy-paste prompt](PROMPT.md).
+[Worktrees](docs/WORKTREES.md) · [Copy-paste prompt](PROMPT.md).
 
 OpenCode does **not** sync global instructions through an account. This package installs them on each
 machine from Git, non-destructively.

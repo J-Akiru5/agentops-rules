@@ -5,7 +5,7 @@ Owner: project owner (human)
 Integrator machine: LOQ
 Second machine: the owner’s other laptop (OpenCode 2)
 Repository: `J-Akiru5/lagavista` (private)
-Rules package: `J-Akiru5/agentops-rules` (private, v1.2.0+)
+Rules package: `J-Akiru5/agentops-rules` (private, v1.4.0+)
 
 ## Objective
 
@@ -28,10 +28,10 @@ claims. Task assignment in the plan/PR and branch ownership prevent duplicate wo
 ## Phase 0 — Upgrade and install (both machines)
 
 - [ ] `opencode --version` reports **2.x** on both machines.
-- [ ] Install/update rules v1.2.0+:
+- [ ] Install/update rules v1.4.0+:
       `git pull` in the rules repo, then `node install.mjs --opencode v2`.
 - [ ] Config check on both:
-      `permissions` is an array, no deprecated `permission` block, 4 absolute instruction entries.
+      `permissions` is an array, no deprecated `permission` block, 5 absolute instruction entries.
 - [ ] `node ~/.config/opencode/bin/agentctl.mjs help` works.
 - [ ] Fresh session answers the waiting/status and deployment-policy questions.
 
@@ -52,6 +52,8 @@ node "$env:USERPROFILE\.config\opencode\bin\agentctl.mjs" status
 - [ ] `develop` matches `origin/develop`.
 - [ ] The plan validates (`agentctl plan validate`).
 - [ ] The machine can read `plan/PROJECT.md`, `plan/policy.yaml` and task contracts.
+- [ ] `agentctl claim` can create a local worktree (`../worktrees` by default); worktrees and state are
+      per machine, never shared over a network drive.
 
 Acceptance: laptop 2 reads the same authoritative plan from `origin/develop`; no stale checkout edits.
 
@@ -85,8 +87,11 @@ Acceptance:
 
 ## Phase 4 — Steady state
 
-- One task, one worktree, one branch. Contracts own file globs; hot paths (schema, migrations,
-  generated types) are one task at a time.
+- One task, one worktree, one branch. `agentctl claim` auto-creates the worktree and enforces
+  isolation; contracts own file globs. Hot paths (schema, migrations, generated types) are one task
+  at a time.
+- Cleanup is smart but manual: `agentctl cleanup` is a dry run; `--apply` removes only clean,
+  unclaimed, terminal, remote-preserved worktrees.
 - Amendments: Tier 1 self-approved, Tier 2 via a lead, Tier 3 only with owner authorization.
 - Integrations are serialized on the LOQ; laptop 2 never integrates unless designated.
 - Dispatch subagents for independent light work (exploration, review, docs, log triage); use the
