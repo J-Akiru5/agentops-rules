@@ -272,6 +272,20 @@ A red resource level is a scheduling constraint, **not a stop order**.
   self-certify its own benchmark.
 - Full standard: `~/.config/opencode/instructions/subagent-orchestration.md`.
 
+# Versioning and Releases
+
+Use Semantic Versioning (`MAJOR.MINOR.PATCH`), annotated `vX.Y.Z` tags, and immutable releases.
+
+- Agents prepare releases (Unreleased changelog, version files, tests, release notes, artifact);
+  **the owner creates/pushes the tag and publishes** unless a named release is explicitly delegated.
+- `package.json`, `VERSION`, the Git tag and the release title must match; run
+  `node scripts/release-check.mjs --tag vX.Y.Z` before tagging.
+- MAJOR for breaking changes; MINOR for compatible features/instructions; PATCH for fixes/docs.
+  Contract `rev` is an amendment revision, not semver.
+- Never retag, delete or replace a published release; fix forward with a new PATCH. No npm publication
+  without a separate owner decision. A release is not a deployment.
+- Full rule: `~/.config/opencode/instructions/versioning.md`.
+
 # Vercel Deployment Governance
 
 Automatic Vercel deployments are allowed **only** for `main` and `develop`. Every other branch —

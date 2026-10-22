@@ -71,7 +71,7 @@ node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync(process.env.U
 Expected:
 
 ```json
-{ "permissions": true, "v1Block": false, "instructions": 5, "permissionRules": 27 }
+{ "permissions": true, "v1Block": false, "instructions": 6, "permissionRules": 27 }
 ```
 
 The config should contain an absolute `instructions` entry for each of:
@@ -81,6 +81,7 @@ The config should contain an absolute `instructions` entry for each of:
 - `instructions/deployment-governance.md`
 - `instructions/team-development.md`
 - `instructions/subagent-orchestration.md`
+- `instructions/versioning.md`
 
 The installer also places the read-only `benchmark` subagent at
 `~/.config/opencode/agents/benchmark.md`.
@@ -95,7 +96,8 @@ The installer also places the read-only `benchmark` subagent at
     "C:/Users/<you>/.config/opencode/instructions/agentops-backbone.md",
     "C:/Users/<you>/.config/opencode/instructions/deployment-governance.md",
     "C:/Users/<you>/.config/opencode/instructions/team-development.md",
-    "C:/Users/<you>/.config/opencode/instructions/subagent-orchestration.md"
+    "C:/Users/<you>/.config/opencode/instructions/subagent-orchestration.md",
+    "C:/Users/<you>/.config/opencode/instructions/versioning.md"
   ],
   "permissions": [
     { "action": "shell", "resource": "git push --force*", "effect": "ask" },
@@ -147,10 +149,10 @@ node install.mjs --opencode v2
 If `opencode2` already exists and reports 2.x, you can keep it and run
 `node install.mjs --opencode v2`, using `opencode2` consistently.
 
-### The repository or release download is private
+### Release download notes
 
-The rules repo is private. Sign in with `gh auth login --web`, use `gh release download`, or clone
-with Git using your GitHub credentials. On a different GitHub account, be added as a collaborator.
+The rules repo is public. Download a release, use `gh release download`, or clone with Git. GitHub
+authentication is only needed for rate limits or private forks.
 
 ### The config was reformatted and lost comments
 
@@ -159,8 +161,8 @@ That is expected: the installer writes plain JSON and keeps the original under
 
 ## Related documents
 
-- [`TEAM-PLAN.md`](TEAM-PLAN.md) — rollout and operating plan for both laptops.
-- [`SUBAGENTS.md`](SUBAGENTS.md) — delegation and the benchmark subagent standard.
-- [`WORKTREES.md`](WORKTREES.md) — automatic worktree instantiation, isolation and cleanup.
-- [`../PROMPT.md`](../PROMPT.md) — copy-paste install/verification prompt.
-- [`../README.md`](../README.md) — package overview and options.
+- [`team-plan.md`](team-plan.md) — rollout and operating plan for both laptops.
+- [`subagents.md`](subagents.md) — delegation and the benchmark subagent standard.
+- [`worktrees.md`](worktrees.md) — automatic worktree instantiation, isolation and cleanup.
+- [`PROMPT.md`](https://github.com/J-Akiru5/agentops-rules/blob/main/PROMPT.md) - copy-paste install/verification prompt.
+- [`README.md`](https://github.com/J-Akiru5/agentops-rules/blob/main/README.md) - package overview and options.

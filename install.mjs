@@ -49,6 +49,7 @@ const MANAGED_INSTRUCTION_FILES = [
   "deployment-governance.md",
   "team-development.md",
   "subagent-orchestration.md",
+  "versioning.md",
 ];
 
 const MANAGED_PERMISSIONS = [

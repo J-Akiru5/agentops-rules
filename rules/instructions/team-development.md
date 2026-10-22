@@ -21,7 +21,7 @@ repository. It extends the other global rules; it does not replace them.
 - Other machines implement, verify and push task branches. They do not run integration unless the
   owner explicitly changes the designated integrator.
 - Only the human promotes `main`. No agent pushes `main` or `staging`.
-- Use a unique `AGENT_ID` per machine (for example `opencode-loq`, `opencode-laptop2`) so local
+- Use a unique `AGENT_ID` per machine (for example `opencode-primary`, `opencode-second`) so local
   journals, evidence and acknowledgments are attributable.
 
 ## Task flow

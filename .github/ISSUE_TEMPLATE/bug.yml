@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible problem with the installer, CLI, rules or docs.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, tokens, private URLs or `.env` contents.
+        For security issues, use GitHub Security Advisories instead of this form.
+  - type: input
+    id: version
+    attributes:
+      label: Version / tag
+      description: The release tag or commit you installed.
+      placeholder: v1.5.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Installer
+        - agentctl
+        - orchestrator
+        - Rules/instructions
+        - Docs site
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Windows 11, Node 24.14, OpenCode 2.0.32
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include exact commands and relevant output (redact secrets).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

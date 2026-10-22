@@ -6,9 +6,9 @@
  * designated development project (never production), takes an exclusive `db-dev` lease, runs the
  * repository's migration command, and records the evidence. The connection string is never printed.
  *
- * Repository reality (2026-10-20): Lagavista applies SQL migrations through
- * `pnpm --filter @lagavista/web db:migrate` (scripts/migrate.ts + pg). There is no supabase/config.toml,
- * so `supabase db push` is supported as a policy option for repositories that do configure it.
+ * Repository reality: the policy supplies the migration command; this module has no project-specific
+ * paths. The reference project uses a Node/pg migration runner (no supabase/config.toml), so the
+ * default tool is db_migrate; supabase db push remains a policy option for repos that configure it.
  */
 import fs from "node:fs";
 import path from "node:path";

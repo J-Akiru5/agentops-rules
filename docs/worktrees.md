@@ -1,7 +1,7 @@
 # Worktrees: automatic instantiation, isolation, cleanup
 
 Applies to `agentops-rules` v1.4.0+. The full branch-aware rules live in
-[`../rules/AGENTS.md`](../rules/AGENTS.md).
+[rules/AGENTS.md](https://github.com/J-Akiru5/agentops-rules/blob/main/rules/AGENTS.md).
 
 ## Policy
 
@@ -23,7 +23,7 @@ deliberately manage worktrees yourself; claims will then require `--worktree` wh
 ## Claim behavior
 
 ```powershell
-agentctl claim T-0004 --agent opencode-loqu
+agentctl claim T-0004 --agent opencode-primary
 ```
 
 With auto-create enabled, `claim`:
@@ -43,7 +43,7 @@ It refuses if:
 Use an existing isolated worktree:
 
 ```powershell
-agentctl claim T-0004 --agent opencode-loqu --worktree S:\Dev\Monorepo\worktrees\my-task
+agentctl claim T-0004 --agent opencode-primary --worktree <worktree-root>/my-task
 ```
 
 With `require_isolated_claim: true`, that worktree must be:

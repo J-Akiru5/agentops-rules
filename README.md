@@ -1,25 +1,15 @@
-# AgentOps global rules
+# AgentOps Rules
 
-Portable OpenCode development protocol for the team: waiting/status discipline, branch-aware
-worktree orchestration, autonomous engineering, the planning backbone (`agentctl`), Vercel deployment
-governance, and multi-machine team coordination.
+[![CI](https://github.com/J-Akiru5/agentops-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/J-Akiru5/agentops-rules/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/J-Akiru5/agentops-rules)](https://github.com/J-Akiru5/agentops-rules/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![OpenCode 2](https://img.shields.io/badge/OpenCode-2.x-000000)](https://opencode.ai/v2)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522.5-339933)](https://nodejs.org)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://j-akiru5.github.io/agentops-rules/)
 
-**OpenCode 2 is the primary target (v1.2.0+).** V1 remains supported for legacy machines, but the
-installer detects the binary and migrates a V1 `permission` block to the V2 `permissions` array when
-you upgrade. Docs: [OpenCode 2 setup](docs/OPENCODE-2.md) · [Team plan](docs/TEAM-PLAN.md) ·
-[Worktrees](docs/WORKTREES.md) · [Copy-paste prompt](PROMPT.md).
-
-OpenCode does **not** sync global instructions through an account. This package installs them on each
-machine from Git, non-destructively.
-
-## Requirements
-
-- Node.js **22.5+** (uses `node:sqlite`; tested on Node 24)
-- Git
-- OpenCode **V1 or V2** (the installer detects the version; `--opencode v1|v2` overrides)
-- Windows (PowerShell or cmd) or macOS/Linux
-
-## Install (each laptop)
+A portable operating protocol for autonomous coding agents on **OpenCode**. It gives agents a
+canonical plan, transactional coordination, evidence-based verification, isolated worktrees,
+serialized integration, safe deployments and measurable subagents — installed globally, non-destructively.
 
 ```powershell
 git clone https://github.com/J-Akiru5/agentops-rules.git
@@ -27,177 +17,112 @@ cd agentops-rules
 node install.mjs
 ```
 
-Then **restart OpenCode** and start a fresh session. Confirm:
+Then restart OpenCode and start a fresh session.
 
-- Ask: “What is your waiting/status protocol?”
-- Ask: “Which branches may trigger Vercel deployments?”
-- Run: `node ~/.config/opencode/bin/agentctl.mjs help`
+## Why
 
-If your config uses `opencode.json` instead of `opencode.jsonc`, the installer detects and updates it.
-`--target <dir>` installs into a custom OpenCode config directory (useful for testing).
+Autonomous coding fails when completion is prose. This package makes the workflow inspectable:
 
-### Download instead of Git
+- **Intent** — versioned Markdown contracts on `develop`, read through Git, never a stale checkout.
+- **State** — SQLite in `<git-common-dir>/agentops/state.db`: atomic claims, leases, fencing, evidence,
+  locks. Never a concurrently edited Markdown board.
+- **Evidence** — tool-produced verification keyed to the exact tree; completion requires integration and
+  remote verification, not "it builds".
+- **Worktrees** — `agentctl claim` auto-creates an isolated worktree and task branch, refuses the
+  primary checkout and dirty/foreign trees, and prints the path to move to.
+- **Integration** — a deterministic integrator merges a candidate, verifies it, commits evidence,
+  advances `develop` by compare-and-swap, pushes, and verifies the remote.
+- **Deployments** — Vercel automatic deployments are allowlisted to `main`/`develop`; agents never
+  deploy to test.
+- **Subagents** — a dispatch contract plus a read-only `benchmark` subagent for performance claims.
+- **Resources** — red/amber levels defer heavy work; they are not stop orders. Agents continue light
+  work or another task.
 
-Download `agentops-rules.zip` from
-[Releases](https://github.com/J-Akiru5/agentops-rules/releases/latest), extract it, then run:
+## Compatibility
 
-```powershell
-node install.mjs
-```
+- OpenCode **V1 and V2** (V2 primary; V1 legacy config path)
+- Node.js **≥ 22.5** (`node:sqlite`)
+- Windows, Linux; macOS supported
+- No external services, no credentials, no deployments during install
 
-The repository is private; sign in to GitHub to download, or use `gh release download` as shown in
-`PROMPT.md`.
+The installer detects `opencode --version` and writes the matching config shape. V1 uses
+`permission.bash`/`permission.shell`; V2 uses the ordered `permissions` array. A V1 config upgraded to V2
+is migrated automatically.
 
-### OpenCode V1 vs V2 (important)
+## Documentation
 
-The installer runs `opencode --version` and writes the matching config format:
+- **Docs site:** https://j-akiru5.github.io/agentops-rules/
+- [Getting started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
+- [CLI reference](docs/cli-reference.md)
+- [Policy reference](docs/policy-reference.md)
+- [Contract reference](docs/contract-reference.md)
+- [Worktrees](docs/worktrees.md)
+- [Subagents and benchmarking](docs/subagents.md)
+- [Deployment governance](docs/deployment-governance.md)
+- [Team plan](docs/team-plan.md)
+- [Versioning](docs/versioning.md) · [Releasing](docs/releasing.md)
+- [Migrations](docs/migrations.md)
+- [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
-- **V2 (primary)** → ordered `permissions` array. If a V1 `permission` object exists, it is converted
-  into V2 rules and removed (backup kept).
-- **V1 (legacy)** → `permission.bash` + `permission.shell` objects (V1 has used both tool names). Any
-  V2 `permissions` array is removed, so the error “V2 permissions are not supported by OpenCode V1”
-  disappears.
+## What gets installed
 
-Override detection when needed:
-
-```powershell
-node install.mjs --opencode v2   # opencode 2.x (recommended)
-node install.mjs --opencode v1   # legacy opencode 1.x
-```
-
-The config format must match the binary you actually run. If `opencode` is V1 and `opencode2` is V2,
-pick one consistently: for V2 run `node install.mjs --opencode v2` and use `opencode2`. To replace the
-V1 `opencode` shim with V2:
-
-```powershell
-Remove-Item "$env:APPDATA\npm\opencode.ps1" -Force
-npm install -g @opencode/cli
-node install.mjs --opencode v2
-```
-
-Instruction entries are written as **absolute paths** in either mode, so V1 and V2 resolve the same
-files deterministically.
-
-See [`docs/OPENCODE-2.md`](docs/OPENCODE-2.md) for the full OpenCode 2 upgrade and verification
-guide.
-
-### Copy-paste prompt
-
-See [`PROMPT.md`](PROMPT.md) for a prompt you can paste into OpenCode on the other machine. It
-downloads the release, runs the installer, reports the result, and verifies the rules.
-
-## What the installer changes
-
-| Target | Change |
+| Path | Purpose |
 | --- | --- |
-| `~/.config/opencode/AGENTS.md` | Adds/updates a managed block. Your existing content is preserved. |
-| `~/.config/opencode/instructions/*.md` | Installs/updates the four shared rule files. |
-| `~/.config/opencode/bin/agentctl.mjs` + `bin/agentops/` | Installs the AgentOps CLI and modules. |
-| `~/.config/opencode/bin/orchestrator.mjs` | Installs the resource/worktree helper. |
-| `~/.config/opencode/opencode.jsonc` | Adds the managed instruction entries and safe permission rules. Existing keys, instructions and permissions are preserved. |
+| `~/.config/opencode/AGENTS.md` | Managed block: waiting/status, worktree, versioning, deployment, resource/subagent rules |
+| `~/.config/opencode/instructions/*.md` | Six detailed protocols (autonomy, AgentOps, deployment, team, subagents, versioning) |
+| `~/.config/opencode/agents/benchmark.md` | Read-only global benchmark subagent |
+| `~/.config/opencode/bin/agentctl.mjs` + `bin/agentops/` | Planning/verification/integration CLI |
+| `~/.config/opencode/bin/orchestrator.mjs` | Resource and worktree inventory helper |
+| `~/.config/opencode/opencode.jsonc` | Instructions + ordered permission rules (merged, not replaced) |
 
-- Every modified file is backed up to `~/.config/opencode/.agentops/backups/<timestamp>/` first.
-- Re-running is idempotent; managed entries are added once.
-- The installer rewrites `opencode.jsonc` as plain JSON (comments are lost in the live file, but the
-  original is in the backup). If you prefer to keep comments, merge manually from the backup instead.
-- No network calls, no secrets, no deployment side effects.
+Every modified file is backed up under `~/.config/opencode/.agentops/backups/<timestamp>/`. Re-running
+the installer is idempotent.
 
-Options: `--dry-run`, `--no-backup`, `--target <dir>`, `--run-tests` (runs the full reliability suite;
-takes several minutes), `--help`.
+## Install options
 
-## Update
+Download `agentops-rules.zip` from [Releases](https://github.com/J-Akiru5/agentops-rules/releases) and run
+`node install.mjs`, or clone as above. Useful flags:
 
-```powershell
-cd agentops-rules
-git pull
-node install.mjs
+```text
+--target <dir>          install into a custom OpenCode config directory
+--opencode auto|v1|v2   override binary detection
+--dry-run               show what would change
+--no-backup             skip backups (not recommended)
+--run-tests             run the full reliability suite after install
 ```
 
-## Team model (important)
+`PROMPT.md` contains copy-paste prompts for another machine.
 
-- Rules are identical on every machine; **runtime state is not**.
-  `<git-common-dir>/agentops/state.db` is local to each clone. Claims/leases do not coordinate across
-  machines, and must not be placed on a network share or sync folder.
-- Designate one **integrator machine**. Only it runs `agentctl integrate` and pushes `origin/develop`.
-  Other machines implement, verify and push task branches.
-- Only the human promotes `main`. No agent pushes `main` or `staging`.
-- Use a unique `AGENT_ID` per machine when running `agentctl` (for example `opencode-loq`,
-  `opencode-laptop2`).
-- Before pushing a feature branch, confirm the repository's Vercel allowlist is active on `main`;
-  otherwise preview deployments can still be created and consume the daily allowance.
-- Cross-machine atomic claims require a shared state service, which this package does not provide.
-  Coordinate by task assignment in the plan/PR and branch ownership.
+## Versioning and releases
 
-## Included rules
+The project follows [Semantic Versioning](docs/versioning.md). Agents prepare releases (changelog,
+version files, tests, notes, artifact); **the owner creates and pushes the `vX.Y.Z` tag**, and the
+release workflow publishes the GitHub Release with a zip and SHA256 checksum.
 
-- `rules/AGENTS.md` — waiting/status protocol, branch-aware worktree orchestration, Vercel deployment
-  governance.
-- `rules/instructions/autonomous-orchestration.md` — autonomy tiers, resource-aware scheduling,
-  coordination, honesty rules.
-- `rules/instructions/agentops-backbone.md` — `agentctl` workflow, task contracts, evidence, integration,
-  database and reporting.
-- `rules/instructions/deployment-governance.md` — deployment allowlist, agent prohibitions, first-
-  instantiation checklist.
-- `rules/instructions/team-development.md` — multi-machine roles, handoffs, state limitations.
-- `rules/instructions/subagent-orchestration.md` — delegation, benchmark standard, resource-pressure behavior.
-- `rules/agents/benchmark.md` — read-only global `benchmark` subagent.
-- `bin/agentctl.mjs` + `bin/agentops/*` — deterministic planning/verification/integration CLI.
-- `bin/orchestrator.mjs` — resource and worktree inventory helper.
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Release checklist: [docs/releasing.md](docs/releasing.md)
+- Immutable tags/releases; fix forward with a PATCH.
 
-## Subagents and benchmarking
-
-Subagents are for independent, parallelizable work: exploration, review, docs, log triage and
-measurement. The parent verifies their output; subagent prose is not evidence.
-
-A global **`benchmark`** subagent is installed for performance/resource-sensitive work (latency,
-memory, bundle size, build/test duration, query plans, regressions). It is read-only, cannot push or
-deploy, and reports baseline/candidate, workload, metric, repetitions and spread. Use it whenever
-acceptance criteria depend on measured behavior; an implementer cannot self-certify its own benchmark.
-
-See [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md) for the dispatch contract and examples.
-
-Under resource pressure, a red level is **not a stop order**: continue with light work, dispatch light
-subagents, or pick another eligible task; defer heavy checks and retry later.
-
-## Uninstall / rollback
-
-Restore the files from the newest backup directory:
+## Development
 
 ```powershell
-Get-ChildItem ~/.config/opencode/.agentops/backups | Sort-Object Name | Select-Object -Last 1
+node --test install.test.mjs      # installer
+node --test bin/orchestrator.test.mjs
+node --test bin/agentctl.test.mjs # full AgentOps suite
+npm ci
+npm run docs:build                # VitePress site
 ```
 
-Copy the backed-up files back over the installed ones. Remove the managed block (between
-`<!-- BEGIN agentops-global (managed) -->` and `<!-- END agentops-global (managed) -->`) from
-`AGENTS.md`. Remove the managed `instructions` entries and permission rules if desired.
+CI runs the installer, orchestrator and full AgentOps suite on Windows/Ubuntu with Node 22/24, plus a
+docs build.
 
-## Using with the Lagavista repository
+## Security
 
-```powershell
-git clone https://github.com/J-Akiru5/lagavista.git
-cd lagavista
-agentctl plan sync
-agentctl status
-```
+The package installs local files and a CLI. It contains no credentials and makes no network calls during
+installation. Runtime state stays on the local disk; never put `.git/agentops/state.db` on a network or
+sync folder. Report vulnerabilities privately via GitHub Security Advisories — see [SECURITY.md](SECURITY.md).
 
-The project’s `AGENTS.md`, `plan/` contracts and policy travel with the repository. The global rules
-installed by this package supply the workflow; `agentctl` is installed at
-`~/.config/opencode/bin/agentctl.mjs`.
+## License
 
-Set a per-machine identity for local state and evidence:
-
-```powershell
-$env:AGENT_ID = "opencode-laptop2"   # add to your PowerShell profile
-```
-
-Designate one integrator machine (normally the primary machine) to run `agentctl integrate` and push
-`origin/develop`. The other machine pushes task branches and does not integrate.
-
-## Develop this package
-
-```powershell
-node --test install.test.mjs
-node install.mjs --target .\tmp-test
-```
-
-Version: see `VERSION`. Changes: see `CHANGELOG.md`.
+[MIT](LICENSE) © 2026 Jeff Akiru (J-Akiru5).

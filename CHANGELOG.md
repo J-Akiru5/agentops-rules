@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0 — 2026-10-22
+
+- **Versioning and release governance**: new `versioning.md` instruction (sixth managed file), global
+  AGENTS section, SemVer mapping, version-source checks, human-published releases and immutable tags.
+- **Public documentation site**: VitePress site with guide/reference pages, local search and GitHub Pages
+  deployment; README overhauled for public consumption.
+- **Repository infrastructure**: MIT license, SECURITY, CONTRIBUTING, issue/PR templates, CODEOWNERS,
+  CI matrix (Windows/Ubuntu, Node 22/24), tag-driven release workflow with zip + SHA256, docs workflow.
+- **Release gate**: `scripts/release-check.mjs` validates `package.json`/`VERSION`/tag/changelog/docs;
+  `scripts/release-notes.mjs` extracts notes from the changelog.
+- **6 instructions / 27 permissions** expected after reinstall; no breaking installer or state change.
+
 ## 1.4.0 — 2026-10-22
 
 - **Automatic worktree instantiation**: `agentctl claim` creates an isolated worktree and task branch
@@ -8,7 +20,7 @@
   branch mismatches, and worktrees already claimed by another task.
 - **Flags/overrides**: `--create`, `--no-create`, and clean registered `--worktree`; auto-create
   defaults are on, with a policy switch for deliberate manual management.
-- **Docs**: `docs/WORKTREES.md` covers policy, claim behavior, isolation, session move, cleanup and
+- **Docs**: `docs/worktrees.md` covers policy, claim behavior, isolation, session move, cleanup and
   big-feature decomposition. Global rules, team plan and README updated.
 - **Tests**: auto-create path/branch/registration, primary/unregistered/dirty/already-claimed refusal,
   and existing cleanup behavior.
@@ -25,16 +37,16 @@
   and returns measured evidence with baseline, workload, repetitions and spread.
 - **AgentOps deferral semantics**: `verify` and `integrate` record a resource deferral, leave the task
   state intact, never mark failure, and instruct the agent to continue with other work.
-- Installer copies `agents/`; docs updated (`docs/SUBAGENTS.md`, OPENCODE-2, TEAM-PLAN, README).
+- Installer copies `agents/`; docs updated (`docs/subagents.md`, OPENCODE-2, TEAM-PLAN, README).
 - Tests updated for deferral recording and integration deferral (no `develop` movement).
 
 ## 1.2.0 — 2026-10-21
 
-- **OpenCode 2 documentation and migration**: `docs/OPENCODE-2.md` covers fresh install, V1 → V2
+- **OpenCode 2 documentation and migration**: `docs/opencode-2.md` covers fresh install, V1 → V2
   upgrade, config verification and troubleshooting.
 - Installer **migrates V1 `permission` to V2 `permissions`** (including `bash`/`shell` maps) and
   removes the deprecated block; V1 installs write both `permission.bash` and `permission.shell`.
-- **Team plan**: `docs/TEAM-PLAN.md` — rollout phases, roles, pilot task, deployment prerequisite,
+- **Team plan**: `docs/team-plan.md` — rollout phases, roles, pilot task, deployment prerequisite,
   acceptance checklist and risks.
 - `PROMPT.md` updated for v1.2.0 and OpenCode 2, with a config sanity command.
 - Installer tests cover V1, V2, V1→V2 migration, idempotency, dry-run and refusal (7 tests).

@@ -96,6 +96,7 @@ test("fresh install installs rules, CLI and config and passes a quick verify", (
     "deployment-governance.md",
     "team-development.md",
     "subagent-orchestration.md",
+    "versioning.md",
   ]) {
     assert.ok(fs.existsSync(path.join(target, "instructions", name)), `missing ${name}`);
   }
@@ -108,6 +109,7 @@ test("fresh install installs rules, CLI and config and passes a quick verify", (
   assert.equal(config.$schema, "https://opencode.ai/config.json");
   assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/team-development.md")));
   assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/subagent-orchestration.md")));
+  assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/versioning.md")));
   assert.ok(
     config.permissions.some((entry) => entry.resource === "vercel deploy*" && entry.effect === "ask"),
     "deploy permission missing",
@@ -266,6 +268,7 @@ test("V2 install converts a V1 permission object instead of leaving a deprecated
     path.join(target, "instructions", "deployment-governance.md").replaceAll("\\", "/"),
     path.join(target, "instructions", "team-development.md").replaceAll("\\", "/"),
     path.join(target, "instructions", "subagent-orchestration.md").replaceAll("\\", "/"),
+    path.join(target, "instructions", "versioning.md").replaceAll("\\", "/"),
   ]);
 });
 

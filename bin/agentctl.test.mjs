@@ -2,7 +2,7 @@
  * Reliability suite for agentctl.
  *
  * Every test builds disposable Git repositories under the OS temp directory. No test touches the
- * real Lagavista repository, its worktrees, its database, or any network service.
+ * real project repository, its worktrees, its database, or any network service.
  *
  * Run: node --test ~/.config/opencode/bin/agentctl.test.mjs
  */
@@ -131,8 +131,8 @@ resources:
 
 database:
   tool: db_migrate
-  dev_project_ref: devref123
-  production_project_refs: [prodref456]
+  dev_project_ref: example-dev-ref
+  production_project_refs: [example-prod-ref]
   env_file: apps/web/.env.local
   migrate_command: node scripts/agentops/marker.mjs
   verify_command: null
@@ -619,7 +619,7 @@ test("database guard: target identity is verified before any migration command r
     fs.mkdirSync(path.join(fixture.repo, "apps", "web"), { recursive: true });
     fs.writeFileSync(
       path.join(fixture.repo, "apps", "web", ".env.local"),
-      "SUPABASE_DB_URL=postgresql://postgres.devref123:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
+      "SUPABASE_DB_URL=postgresql://postgres.example-dev-ref:example-password@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
       "utf8",
     );
     const okStatus = assertOk(agentctl(fixture.repo, ["db", "status"]), "db status dev");
@@ -630,7 +630,7 @@ test("database guard: target identity is verified before any migration command r
     fs.rmSync(path.join(fixture.repo, "db-ran.txt"));
     fs.writeFileSync(
       path.join(fixture.repo, "apps", "web", ".env.local"),
-      "SUPABASE_DB_URL=postgresql://postgres.prodref456:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
+      "SUPABASE_DB_URL=postgresql://postgres.example-prod-ref:example-password@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
       "utf8",
     );
     assertRefused(agentctl(fixture.repo, ["db", "status"]), "db status production", /production/);
@@ -639,7 +639,7 @@ test("database guard: target identity is verified before any migration command r
 
     fs.writeFileSync(
       path.join(fixture.repo, "apps", "web", ".env.local"),
-      "SUPABASE_DB_URL=postgresql://postgres.unknown:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
+      "SUPABASE_DB_URL=postgresql://postgres.unknown:example-password@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
       "utf8",
     );
     assertRefused(agentctl(fixture.repo, ["db", "push", "--agent", "agent-a"]), "db push unknown", /not verified/);
@@ -712,7 +712,7 @@ test("database lease: concurrent migrations are serialized", async () => {
     fs.mkdirSync(path.join(fixture.repo, "apps", "web"), { recursive: true });
     fs.writeFileSync(
       path.join(fixture.repo, "apps", "web", ".env.local"),
-      "SUPABASE_DB_URL=postgresql://postgres.devref123:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
+      "SUPABASE_DB_URL=postgresql://postgres.example-dev-ref:example-password@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres\n",
       "utf8",
     );
 

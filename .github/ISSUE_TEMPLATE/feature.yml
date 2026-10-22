@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a rule, CLI capability, integration or documentation improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What is hard to do today? Who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should change? Include examples if useful.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: version-impact
+    attributes:
+      label: Expected version impact
+      options:
+        - PATCH (fix/docs)
+        - MINOR (compatible addition)
+        - MAJOR (breaking)
+        - Unsure
+    validations:
+      required: true

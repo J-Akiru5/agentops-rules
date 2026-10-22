@@ -1,6 +1,6 @@
 # Subagents and the benchmark standard
 
-Full rules: [`../rules/instructions/subagent-orchestration.md`](../rules/instructions/subagent-orchestration.md).
+Full rules: [subagent-orchestration.md](https://github.com/J-Akiru5/agentops-rules/blob/main/rules/instructions/subagent-orchestration.md).
 The global `benchmark` subagent is installed at `~/.config/opencode/agents/benchmark.md`.
 
 ## When to dispatch

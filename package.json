@@ -1,11 +1,47 @@
 {
-  "name": "agentops-global-rules",
-  "version": "1.4.0",
+  "name": "agentops-rules",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
-  "description": "Portable OpenCode development protocol and AgentOps tooling for the team",
+  "description": "A portable, verifiable operating protocol for autonomous coding agents on OpenCode: intent, state, evidence, worktrees, integration, deployments and benchmarks.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/J-Akiru5/agentops-rules.git"
+  },
+  "homepage": "https://j-akiru5.github.io/agentops-rules/",
+  "bugs": {
+    "url": "https://github.com/J-Akiru5/agentops-rules/issues"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "bin": {
+    "agentops-rules": "./install.mjs"
+  },
+  "files": [
+    "bin/",
+    "rules/",
+    "install.mjs",
+    "VERSION",
+    "README.md",
+    "LICENSE",
+    "PROMPT.md"
+  ],
   "scripts": {
     "install-rules": "node install.mjs",
-    "test": "node --test install.test.mjs"
+    "test": "node --test install.test.mjs",
+    "test:installer": "node --test install.test.mjs",
+    "test:orchestrator": "node --test bin/orchestrator.test.mjs",
+    "test:agentops": "node --test bin/agentctl.test.mjs",
+    "test:all": "node --test install.test.mjs bin/orchestrator.test.mjs bin/agentctl.test.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "release:check": "node scripts/release-check.mjs",
+    "release:notes": "node scripts/release-notes.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
   }
 }

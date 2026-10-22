@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ matrix.node }}"
+      - name: Installer tests
+        run: node --test install.test.mjs
+      - name: Orchestrator tests
+        run: node --test bin/orchestrator.test.mjs
+      - name: AgentOps suite
+        run: node --test bin/agentctl.test.mjs
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install docs dependencies
+        run: npm ci
+      - name: Build docs
+        run: npm run docs:build
+
+  ci-success:
+    name: ci-success
+    if: always()
+    needs: [tests, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all checks
+        run: |
+          echo "tests: ${{ needs.tests.result }}"
+          echo "docs: ${{ needs.docs.result }}"
+          test "${{ needs.tests.result }}" = "success"
+          test "${{ needs.docs.result }}" = "success"
