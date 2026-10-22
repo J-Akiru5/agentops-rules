@@ -31,6 +31,7 @@ Confirm the team AgentOps rules are active in OpenCode 2. Without using any tool
 2. Which branches may trigger Vercel deployments, and which are ineligible?
 3. Where does AgentOps runtime state live, and why is it not shared across machines?
 4. What must happen before a release tag is pushed?
+5. Can you apply development migrations and deploy develop without asking? What is required for main?
 
 Then run:
 node "$env:USERPROFILE\.config\opencode\bin\agentctl.mjs" help

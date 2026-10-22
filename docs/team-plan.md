@@ -5,7 +5,7 @@ Owner: project owner (human)
 Integrator machine: primary machine
 Second machine: another laptop (OpenCode 2)
 Project repository: `<project-repo>` (private)
-Rules package: `J-Akiru5/agentops-rules` (public, v1.5.0+)
+Rules package: `J-Akiru5/agentops-rules` (public, v1.6.0+)
 
 ## Objective
 
@@ -17,7 +17,7 @@ lost work and unnecessary Vercel deployments.
 
 | Role | Machine | Responsibilities |
 | --- | --- | --- |
-| Owner | any | Promotes `main`, approves Tier-3 amendments, controls deployment quota decisions and publishes releases. |
+| Owner | any | Reviews `main`, explicitly authorizes main deployments, approves Tier-3 amendments, controls deployment quota decisions and publishes releases. |
 | Integrator | primary | Runs `agentctl integrate`, pushes `origin/develop`, owns the final verified state. |
 | Implementer | second | Claims assigned tasks, works in its auto-created worktree, verifies locally, pushes the task branch. |
 | Lead (optional) | either | Approves Tier-2 amendments; must differ from the proposer. |
@@ -28,7 +28,7 @@ claims. Task assignment in the plan/PR and branch ownership prevent duplicate wo
 ## Phase 0 — Upgrade and install (both machines)
 
 - [ ] `opencode --version` reports **2.x** on both machines.
-- [ ] Install/update rules v1.5.0+:
+- [ ] Install/update rules v1.6.0+:
       `git pull` in the rules repo, then `node install.mjs --opencode v2`.
 - [ ] Config check on both:
       `permissions` is an array, no deprecated `permission` block, 6 absolute instruction entries,
@@ -60,7 +60,7 @@ node "$env:USERPROFILE\.config\opencode\bin\agentctl.mjs" status
 
 Before the second machine pushes any feature branch:
 
-- [ ] Promote the Vercel allowlist to `main` (human only):
+- [ ] Promote the Vercel allowlist to `main` (owner action; may be explicitly delegated):
       `git switch main && git merge --no-ff develop && git push origin main`.
 - [ ] Verify statically that `main` contains
       `git.deploymentEnabled: {"*": false, "main": true, "develop": true}` in both apps.
@@ -80,7 +80,7 @@ pushes and consume the daily allowance.
 Acceptance:
 
 - [ ] One task completed by the second machine and integrated by the primary.
-- [ ] Evidence exists for the integrated tree; no manual deployment.
+- [ ] Evidence exists for the integrated tree; no duplicate manual deployment.
 - [ ] Both clones agree on the plan revision and `develop` commit.
 - [ ] No duplicate claim or lost work; foreign worktrees untouched.
 
@@ -99,8 +99,10 @@ Acceptance:
   as evidence; no self-certified benchmarks.
 - Resource pressure is a scheduling constraint, not a stop order: continue light work or another task,
   defer heavy checks, and never claim deferred checks passed.
-- Deployments: only `main` (human promotion) and `develop` (integrator push). No previews, no manual
-  `vercel deploy`, no deploy hooks without authorization.
+- Deployments: development migrations and `develop` deployments are pre-authorized (prefer the
+  integrator push). `main` is owner-reviewed; deploy it only on an explicit owner instruction,
+  including the owner-authorized admin path if repository policy blocks it. No other branch previews,
+  duplicate deploys or deploy hooks without authorization.
 - Releases: agents prepare the version/changelog/tests; the owner tags and publishes. See
   [Versioning](/versioning) and [Releasing](/releasing).
 - Weekly: `agentctl report` from the primary; review blocked tasks, amendments and worktree retention.

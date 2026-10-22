@@ -20,7 +20,9 @@ repository. It extends the other global rules; it does not replace them.
   `agentctl integrate` and pushes `origin/develop`.
 - Other machines implement, verify and push task branches. They do not run integration unless the
   owner explicitly changes the designated integrator.
-- Only the human promotes `main`. No agent pushes `main` or `staging`.
+- By default only the owner promotes `main`. An explicit owner instruction to deploy/promote `main`
+  authorizes the agent to perform that specific deployment, including the owner-authorized admin path
+  if repository policy blocks it. No agent pushes `staging`.
 - Use a unique `AGENT_ID` per machine (for example `opencode-primary`, `opencode-second`) so local
   journals, evidence and acknowledgments are attributable.
 
@@ -36,10 +38,12 @@ repository. It extends the other global rules; it does not replace them.
 
 ## Shared constraints
 
-- Never push `main` or `staging`; never force-push or rewrite shared history.
-- Deployment allowlist: only `main` and `develop`. Before pushing a feature branch, confirm the
-  repository's allowlist is active on `main`; otherwise Vercel may still create preview deployments
-  and consume the daily allowance. Never deploy to test.
+- Never push `staging`; push `main` only when the owner explicitly instructs a main deployment or
+  promotion. Never force-push or rewrite shared history.
+- Deployment allowlist: only `main` and `develop`. Development migrations and `develop` deployments
+  are pre-authorized; a main/production deployment requires the owner's explicit instruction. Before
+  pushing a feature branch, confirm the repository's allowlist is active on `main`; otherwise Vercel
+  may still create preview deployments. Never deploy to test.
 - Resource measurements are per machine. Run `orchestrator resources` locally and respect that
   host's limits; never assume the other machine's capacity.
 - Cross-machine atomic claims require a shared state service, which this package does not provide.

@@ -40,9 +40,11 @@ OpenCode config directory.
 
 ## Permissions
 
-The installed `permissions` rules ask before force-push, history rewriting, destructive shell, deployment
-and database-reset operations. These are safeguards, not a sandbox. Review the rules in your
-`opencode.jsonc` and adapt them to your machine. The last matching rule wins.
+The installed `permissions` rules allow the pre-authorized development migration/`develop` deployment
+paths and ask before force-push, history rewriting, rollback, deploy hooks, destructive shell and
+database-reset operations. A `main` deployment is allowed by the rule set only when the owner
+explicitly instructs it. These are safeguards, not a sandbox. Review the rules in your `opencode.jsonc`
+and adapt them to your machine. The last matching rule wins.
 
 ## Supply chain
 

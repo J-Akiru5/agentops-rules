@@ -4,6 +4,7 @@
 
 | Version | Highlights | Migration action |
 | --- | --- | --- |
+| **1.6.0** | Development migrations and `develop` deployments pre-authorized; explicit owner instruction authorizes a `main` deployment; permission effects updated | Reinstall. Expect **6 instructions** and **27 permissions**; V2 installer updates the managed `ask` effects to `allow` in place. No CLI/state/schema change. |
 | **1.5.0** | Versioning/release rule; public docs site; public repo; release automation | Reinstall; expect **6 instructions** and still 27 permissions. No config shape change. |
 | **1.4.0** | Automatic worktree instantiation + isolation enforcement in `claim`; `worktree` policy block | Reinstall. Existing workflows continue; claims now auto-create by default. Set `worktree.auto_create: false` to keep manual management. |
 | **1.3.0** | Resource deferral semantics; subagent orchestration standard; global `benchmark` subagent | Reinstall; restart OpenCode so the agent is discovered. |
@@ -20,6 +21,22 @@ node install.mjs
 
 Or download the latest release zip and run `node install.mjs`. Updates are idempotent and back up every
 modified file.
+
+## Version 1.6.0 — development-first migrations and deployments
+
+- **Development migrations are pre-authorized** against the verified development target. The agent
+  applies them without asking; production credentials/data and production migrations remain out of scope.
+- **`develop` deployments are pre-authorized.** Prefer the integrator/Git deployment; do not duplicate
+  it manually.
+- **`main` is owner-reviewed by default.** An explicit owner instruction to deploy/promote `main`
+  authorizes that specific deployment, including the owner-authorized admin path when repository policy
+  or branch protection blocks it. No force-push, history rewrite, permanent protection change or
+  production migration.
+- The V2 installer now updates managed permission effects in place instead of adding duplicate rules.
+  The nine Vercel deploy/promote/redeploy entries and admin-merge entry move from `ask` to `allow`;
+  rollback, deploy hooks, database reset and force-push remain `ask`.
+- Permission count remains **27**; instructions remain **6**. No `agentctl` state/schema change.
+- Reinstall is required to update an existing `opencode.jsonc`.
 
 ## Version 1.5.0 — versioning and public documentation
 

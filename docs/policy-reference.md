@@ -94,8 +94,10 @@ evidence.
 ## Deployment
 
 The allowlist is strict. `*` must be false in `vercel.json`; only `main`/`develop` are true. Staging is
-excluded. Contracts touching `sensitive_paths` must declare `deployment_impact`; `none` is refused when
-the diff touches them. See [Deployment governance](/deployment-governance).
+excluded. Development migrations and `develop` deployments are pre-authorized; a `main` deployment
+requires an explicit owner instruction. Contracts touching `sensitive_paths` must declare
+`deployment_impact`; `none` is refused when the diff touches them. See
+[Deployment governance](/deployment-governance).
 
 ## Worktree
 

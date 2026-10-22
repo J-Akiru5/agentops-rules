@@ -46,6 +46,7 @@ Restart OpenCode and start a fresh session. Ask:
 
 - “What is your waiting/status protocol?”
 - “Which branches may trigger Vercel deployments?”
+- “Can you apply a development migration or deploy `develop` without asking? What about `main`?”
 - “Where does AgentOps state live, and why is it not shared across machines?”
 
 Then run:

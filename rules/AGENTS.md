@@ -139,9 +139,10 @@ For every integration:
 - Integrate changes in dependency-aware order.
 - Avoid blind bulk merges, indiscriminate rebases, and forced updates to shared branches.
 - Never use destructive resets, forced pushes, or history rewriting on shared branches without explicit authorization.
-- Do not bypass required review, CI, or repository protections.
+- Do not bypass required review, CI, or repository protections, except for a specific
+  owner-authorized `main` deployment under the deployment-governance rule.
 
-If the repository requires pull requests, reconcile through that workflow rather than bypassing it for convenience.
+If the repository requires pull requests, reconcile through that workflow rather than bypassing it for convenience, except when the owner explicitly authorizes a `main` deployment and the protected path blocks it.
 
 ### Conflict handling
 
@@ -288,16 +289,28 @@ Use Semantic Versioning (`MAJOR.MINOR.PATCH`), annotated `vX.Y.Z` tags, and immu
 
 # Vercel Deployment Governance
 
-Automatic Vercel deployments are allowed **only** for `main` and `develop`. Every other branch —
-`staging`, feature, agent, temporary, experiment, Dependabot, unknown — and pull requests from them
-are deployment-ineligible by default.
+Automatic Git deployments are allowed **only** for `main` and `develop`. Feature, agent, temporary,
+experiment, Dependabot, unknown branches and their pull-request previews are ineligible. Never deploy
+another branch.
 
-- Do not run `vercel deploy`, `vercel --prod`, `vercel promote`, `vercel redeploy`, `vercel rollback`,
-  or create deploy hooks/webhook/API deployments without explicit authorization.
-- Do not trigger a deployment to test the policy. Validate configuration statically.
-- `vercel build` is a local build and is allowed; routine local builds/checks are unaffected.
-- Deployment eligibility is not push permission: `develop` is pushed only by the integrator and
-  `main` promotion is human-only.
-- The integrator push to `develop` is the one eligible automatic deployment; never add a second one.
+- **Development migrations are pre-authorized.** Apply migrations against the verified development
+  target without asking, using `agentctl db push` or the project's configured migration command.
+  Never use production credentials or data. Production migrations remain out of scope.
+- **Deployments of `develop` are pre-authorized.** Prefer the integrator push/Git deployment. Do not
+  create a duplicate manual deployment for the same integration. Do not refuse this work on the
+  grounds that the owner usually does it.
+- **`main` is production and owner-reviewed by default.** Agents do not promote `main` unsolicited.
+  When the owner explicitly says to deploy to `main`, promote `main`, or ship production, that
+  instruction authorizes that specific deployment: do it without asking again. If repository policy
+  or branch protection blocks the normal path, use the owner-authorized admin path rather than
+  refusing solely because the policy says agents do not deploy `main`. Never force-push or rewrite
+  shared history, disable protections permanently, or run production migrations; if the only path
+  requires those, stop and report.
+- Do not run unsolicited `vercel deploy`, `vercel --prod`, `vercel promote`, `vercel redeploy`,
+  `vercel rollback`, create deploy hooks, or invoke deployment APIs. Do not deploy to test.
+  `vercel build` is local and allowed.
+- Keep operations distinct: local verification / Git push / automatic `develop` deployment / explicit
+  `main` deployment. The integrator push is the one automatic deployment; never add a second for the
+  same integration.
 - Full protocol and the first-instantiation checklist:
   `~/.config/opencode/instructions/deployment-governance.md`.

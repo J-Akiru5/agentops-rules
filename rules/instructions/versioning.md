@@ -89,6 +89,8 @@ Never publish from an unverified commit, a dirty tree, or a non-release branch.
 - Documentation is published to GitHub Pages from `main`; it describes the current release and links
   to release notes. Older behavior is available through Git tags.
 - A release is separate from deployment. Do not trigger a Vercel deployment to validate a release.
+  An instruction to deploy `main` is not authorization to create/push a release tag or publish a
+  GitHub Release; those remain separate owner decisions.
 
 ## Compatibility
 

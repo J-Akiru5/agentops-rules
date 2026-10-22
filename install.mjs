@@ -62,20 +62,20 @@ const MANAGED_PERMISSIONS = [
   { action: "shell", resource: "git clean -*", effect: "ask" },
   { action: "shell", resource: "git worktree remove *--force*", effect: "ask" },
   { action: "shell", resource: "git branch -D*", effect: "ask" },
-  { action: "shell", resource: "vercel --prod*", effect: "ask" },
-  { action: "shell", resource: "vercel deploy --prod*", effect: "ask" },
-  { action: "shell", resource: "vercel deploy*", effect: "ask" },
-  { action: "shell", resource: "vercel *deploy*", effect: "ask" },
-  { action: "shell", resource: "vercel promote*", effect: "ask" },
-  { action: "shell", resource: "vercel *promote*", effect: "ask" },
-  { action: "shell", resource: "vercel redeploy*", effect: "ask" },
-  { action: "shell", resource: "vercel *redeploy*", effect: "ask" },
+  { action: "shell", resource: "vercel --prod*", effect: "allow" },
+  { action: "shell", resource: "vercel deploy --prod*", effect: "allow" },
+  { action: "shell", resource: "vercel deploy*", effect: "allow" },
+  { action: "shell", resource: "vercel *deploy*", effect: "allow" },
+  { action: "shell", resource: "vercel promote*", effect: "allow" },
+  { action: "shell", resource: "vercel *promote*", effect: "allow" },
+  { action: "shell", resource: "vercel redeploy*", effect: "allow" },
+  { action: "shell", resource: "vercel *redeploy*", effect: "allow" },
   { action: "shell", resource: "vercel rollback*", effect: "ask" },
-  { action: "shell", resource: "npx vercel*", effect: "ask" },
+  { action: "shell", resource: "npx vercel*", effect: "allow" },
   { action: "shell", resource: "*deploy-hook*", effect: "ask" },
   { action: "shell", resource: "supabase db reset*", effect: "ask" },
   { action: "shell", resource: "supabase migration repair*", effect: "ask" },
-  { action: "shell", resource: "gh pr merge * --admin*", effect: "ask" },
+  { action: "shell", resource: "gh pr merge * --admin*", effect: "allow" },
   { action: "shell", resource: "gh api *-X DELETE*", effect: "ask" },
   { action: "shell", resource: "rm -r*", effect: "ask" },
   { action: "shell", resource: "Remove-Item *-Recurse*", effect: "ask" },
@@ -342,17 +342,23 @@ function applyV2Permissions(config) {
     }
   }
   let added = 0;
+  let updated = 0;
   for (const rule of MANAGED_PERMISSIONS) {
-    const exists = permissions.some(
-      (entry) => entry && entry.action === rule.action && entry.resource === rule.resource && entry.effect === rule.effect,
+    const index = permissions.findIndex(
+      (entry) => entry && entry.action === rule.action && entry.resource === rule.resource,
     );
-    if (!exists) {
+    if (index === -1) {
       permissions.push(rule);
       added += 1;
+      continue;
+    }
+    if (permissions[index].effect !== rule.effect) {
+      permissions[index] = { ...permissions[index], effect: rule.effect };
+      updated += 1;
     }
   }
   config.permissions = permissions;
-  return { rules: MANAGED_PERMISSIONS.length, added, migrated, legacyKept };
+  return { rules: MANAGED_PERMISSIONS.length, added, updated, migrated, legacyKept };
 }
 
 function main() {
@@ -491,7 +497,7 @@ function main() {
     if (permissionMerge.skipped) console.log(`permission note: ${permissionMerge.skipped}`);
   } else {
     console.log(
-      `permissions: V2 array (+${permissionMerge.added})${permissionMerge.migrated ? `; migrated ${permissionMerge.migrated} V1 rule(s)` : ""}${permissionMerge.legacyKept ? "; global V1 permission string kept (deprecated)" : ""}`,
+      `permissions: V2 array (+${permissionMerge.added}${permissionMerge.updated ? `, ~${permissionMerge.updated} effect(s)` : ""})${permissionMerge.migrated ? `; migrated ${permissionMerge.migrated} V1 rule(s)` : ""}${permissionMerge.legacyKept ? "; global V1 permission string kept (deprecated)" : ""}`,
     );
   }
   if (backedUp > 0) console.log(`backups: ${backedUp} file(s) under ${backupRoot}`);

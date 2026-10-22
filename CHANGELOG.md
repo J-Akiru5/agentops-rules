@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.0 — 2026-10-22
+
+- **Development-first authorization**: development database migrations against the verified
+  development target and `develop` deployments are pre-authorized. Agents apply them without asking;
+  production credentials/data and production migrations remain out of scope.
+- **Explicit main deployment**: `main` stays owner-reviewed by default. An explicit owner instruction
+  to deploy/promote `main` authorizes that specific deployment, including the owner-authorized admin
+  path when GitHub branch protection or repository policy blocks it. No force-push, history rewrite,
+  permanent protection change or production migration.
+- **Permission effects**: the V2 installer now updates managed permission effects in place instead of
+  adding duplicates. The Vercel deploy/promote/redeploy entries and admin-merge move from `ask` to
+  `allow`; rollback, deploy hooks, database reset and force-push remain `ask`. Still 27 rules.
+- **Rules/docs**: deployment governance, autonomy tiers, AgentOps database/deployment sections, team
+  roles, architecture, security, team plan and docs site updated. No CLI/state/schema change.
+
 ## 1.5.0 — 2026-10-22
 
 - **Versioning and release governance**: new `versioning.md` instruction (sixth managed file), global

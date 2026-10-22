@@ -32,8 +32,9 @@ Autonomous coding fails when completion is prose. This package makes the workflo
   primary checkout and dirty/foreign trees, and prints the path to move to.
 - **Integration** — a deterministic integrator merges a candidate, verifies it, commits evidence,
   advances `develop` by compare-and-swap, pushes, and verifies the remote.
-- **Deployments** — Vercel automatic deployments are allowlisted to `main`/`develop`; agents never
-  deploy to test.
+- **Migrations & deployments** — development migrations and `develop` deployments are pre-authorized;
+  `main` is owner-reviewed and deployed when explicitly instructed, including the authorized admin path
+  if repository policy blocks it. No test or feature-branch deployments.
 - **Subagents** — a dispatch contract plus a read-only `benchmark` subagent for performance claims.
 - **Resources** — red/amber levels defer heavy work; they are not stop orders. Agents continue light
   work or another task.

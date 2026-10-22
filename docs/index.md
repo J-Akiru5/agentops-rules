@@ -20,8 +20,8 @@ features:
     details: agentctl claim creates the task worktree and branch, refuses the primary checkout and dirty/foreign trees, and prints the path to move to.
   - title: Deterministic integration
     details: A serialized integrator merges a candidate, verifies it, commits evidence, advances develop by compare-and-swap, and verifies origin.
-  - title: Deployment governance
-    details: Vercel automatic deployments are allowlisted to main/develop; agents never deploy to test and never promote main.
+  - title: Development-first deployment
+    details: Development migrations and develop deployments are pre-authorized. Main is owner-reviewed and deployed when explicitly instructed, including an authorized admin path when repo policy blocks it.
   - title: Resource-aware, not resource-blocked
     details: Red/amber levels defer heavy work and continue light work, another task, or light subagents. Deferred checks are recorded, never claimed as passed.
   - title: Measured claims

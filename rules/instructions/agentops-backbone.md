@@ -59,11 +59,15 @@ at its last verified commit.
 
 ## Database
 
-- Development migrations are authorized and autonomous: `agentctl db status` verifies the target,
-  `agentctl db push --agent <id>` takes the exclusive `db-dev` lease, runs the configured migration
-  command, records evidence and never prints the connection string.
-- Never use production credentials or data. Never infer the target from a project nickname. If the
-  target cannot be verified, stop the database operation and report the exact uncertainty.
+- Development migrations are authorized, expected and autonomous: `agentctl db status` verifies the
+  target, `agentctl db push --agent <id>` takes the exclusive `db-dev` lease, runs the configured
+  migration command, records evidence and never prints the connection string. Apply them without
+  asking; do not tell the owner to run a development migration the agent can verify.
+- Never use production credentials, production data or a production project ref. Never infer the
+  target from a project nickname. If the target cannot be verified, stop the database operation and
+  report the exact uncertainty.
+- A production/main deployment instruction does **not** authorize a production migration. Production
+  database changes require a separate, explicit owner decision.
 
 ## Resources
 
@@ -94,13 +98,21 @@ the next executable step.
 
 ## Deployment side effects
 
-Deployment eligibility and prohibitions are defined in `instructions/deployment-governance.md`:
-automatic Vercel deployments are allowed only for `main` and `develop`. In this protocol:
+Deployment authorization is defined in `instructions/deployment-governance.md`: automatic Vercel
+deployments are allowed only for `main` and `develop`. Development migrations and `develop` deployments
+are pre-authorized; a `main`/production deployment requires an explicit owner instruction. In this
+protocol:
 
 - Contracts that can affect deployment must declare `deployment_impact` (`none`/`code`/`config`) and,
   when not `none`, `deployment_verification`. Sensitive paths live in `plan/policy.yaml` and are
   enforced by `agentctl plan validate` and the integrator.
-- The integrator's push to `develop` is the only automatic deployment trigger. Never follow an
-  integration with a manual deploy, and never add a second deployment pathway for the same change.
+- The integrator's push to `develop` is the normal automatic deployment. Do not follow an integration
+  with a duplicate manual deployment or add a second pathway for the same change.
+- Apply development migrations without asking. Production database migrations remain out of scope even
+  when the owner authorizes a main deployment; that requires a separate decision.
+- An explicit owner instruction to deploy/promote `main` authorizes that deployment, including the
+  owner-authorized admin path if repository policy blocks it. No force-push, history rewrite or
+  permanent protection change.
 - Deployment configuration is validated statically (config inspection + repo checks), never by
-  deploying. A deployment is a side effect of an eligible push, not evidence that a task passed.
+  deploying. A deployment is a side effect of an eligible push or explicit instruction, not evidence
+  that a task passed.

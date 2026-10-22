@@ -48,19 +48,29 @@ The enforced counterparts of these boundaries are the `permissions` entries in
 worktree; tests; routine checks; fixing ordinary defects; reviewing diffs; documentation; commits on
 your task branch; resolving evidence-supported merge conflicts.
 
-**Tier B — act with safeguards.** Migrations in a disposable or local environment; dependency
+**Tier B — act with safeguards.** Development database migrations against the verified development
+target; deployments of `develop` (prefer the integrator/Git deployment; do not duplicate); dependency
 changes; integration into `develop` through the repository workflow; changes to authentication, RLS
-or schema; expensive end-to-end runs; pushing your own branch; removing a verified-disposable
-worktree when cleanup is authorized. Preflight, keep a recovery path, inspect the final diff, run the
-relevant checks.
+or schema; expensive end-to-end runs; pushing your own branch; removing a verified-disposable worktree
+when cleanup is authorized. Preflight, keep a recovery path, inspect the final diff, run the relevant
+checks. Do not stop to ask for permission to apply a development migration or deploy `develop`.
 
-**Tier C — stop and ask, even when unattended.** Destructive production database changes; deploying
-to production or publishing consequential external changes; deleting unpreserved or ambiguous work;
-force-pushing or rewriting shared branch history; rotating production credentials or changing
-production access controls; exposing secrets or sending private data to unapproved destinations;
-financial commitments or irreversible external actions; bypassing security, repository protection or
-required approval controls. Stop only the blocked action, continue safe independent work, and bring
+**Tier C — stop and ask, even when unattended.** Destructive production database changes; production
+deployment/promotion **unless the owner explicitly instructed that specific deployment**; publishing
+consequential external changes; deleting unpreserved or ambiguous work; force-pushing or rewriting
+shared branch history; rotating production credentials or changing production access controls;
+exposing secrets or sending private data to unapproved destinations; financial commitments or
+irreversible external actions; bypassing security or access controls outside the owner-authorized
+main-deployment path below. Stop only the blocked action, continue safe independent work, and bring
 back the evidence and a recommendation.
+
+**Explicit owner production instruction.** An explicit owner instruction naming `main`/production
+("deploy to main", "ship production", "promote main") authorizes that specific deployment. Perform it
+without asking again, including a normal reviewed promotion. If repository policy, branch protection,
+required reviews or a merge queue blocks the path, use the owner-authorized admin path rather than
+refusing solely because the policy says agents do not deploy `main`. Never force-push, rewrite shared
+history, disable protections permanently, or run production migrations; if the only path requires
+those, stop and report the exact blocker. The authorization is per instruction, not permanent.
 
 ## Resources on each machine
 
@@ -156,10 +166,16 @@ and state plainly when the environment does not support a capability.
 
 ## Deployment side effects
 
-Deployment eligibility is governed by `instructions/deployment-governance.md`: automatic Vercel
-deployments are allowed only for `main` and `develop`. Pushing an eligible branch is a consequential
-operation owned by the integrator; never add a second deployment for the same integration.
+Deployment authorization is governed by `instructions/deployment-governance.md`: automatic Vercel
+deployments are allowed only for `main` and `develop`. Development migrations and `develop`
+deployments are pre-authorized; an explicit owner instruction is required for a `main`/production
+deployment. Pushing an eligible branch is a consequential operation owned by the integrator; never add
+a second deployment for the same integration.
 
-- Do not create preview deployments, deploy hooks, or use the Vercel CLI/API to test deployment policy.
+- Apply development migrations against the verified development target without asking; never production.
+- Prefer the integrator push for `develop`; do not create a duplicate manual deployment.
+- On an explicit owner main instruction, perform the reviewed deployment without re-asking and use the
+  owner-authorized admin path if repository policy blocks it. No force-push or history rewrite.
+- Do not create preview deployments for other branches, deploy hooks, or test deployments.
 - Do not verify governance changes by deploying; use static configuration inspection and local checks.
-- Production deployment/promotion remains Tier C (human). Local builds and `vercel build` are allowed.
+- Production database migrations remain Tier C. Local builds and `vercel build` are allowed.

@@ -101,7 +101,7 @@ The installer also places the read-only `benchmark` subagent at
   ],
   "permissions": [
     { "action": "shell", "resource": "git push --force*", "effect": "ask" },
-    { "action": "shell", "resource": "vercel deploy*", "effect": "ask" }
+    { "action": "shell", "resource": "vercel deploy*", "effect": "allow" }
     // ... 25 more managed rules
   ]
 }

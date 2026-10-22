@@ -56,7 +56,8 @@ Every behavior change gets an entry in the same work that changes it.
 ## Publication
 
 GitHub Releases are canonical. npm is not a current channel; publishing there requires a separate owner
-decision and a MINOR release. A release is not a deployment.
+decision and a MINOR release. A release is not a deployment. An instruction to deploy `main` authorizes
+that deployment only; it does not authorize a release tag or GitHub Release publication.
 
 ## Deprecation
 

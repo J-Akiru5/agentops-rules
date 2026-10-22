@@ -106,7 +106,9 @@ agentctl db push --agent <id> [--task <T-0000>]
 
 `status` verifies the configured development target from `SUPABASE_DB_URL` (host and username) without
 printing it. `push` holds the exclusive `db-dev` lease, runs the configured migration command, records
-evidence and never targets production refs.
+evidence and never targets production refs. Development migrations are pre-authorized: run them
+without asking when the target is verified. Production migrations remain out of scope even when the
+owner authorizes a `main` deployment.
 
 ## Machine and reporting
 

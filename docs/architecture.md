@@ -111,7 +111,9 @@ work only. A read-only `benchmark` subagent is the standard for measured claims.
 
 ## Security boundaries
 
-- Production credentials, data and destructive operations are out of scope.
-- Deployment allowlist: only `main` and `develop`; agents never promote `main`.
-- No force-push, no history rewrite, no shared state on network drives.
+- Production credentials, data, destructive operations and production migrations are out of scope.
+- Development migrations and `develop` deployments are pre-authorized. `main` is owner-reviewed and
+  deployed only on an explicit owner instruction; repository policy may be bypassed through the
+  owner-authorized admin path for that deployment. No force-push or history rewrite.
+- No shared state on network drives.
 - Verification evidence is tool-produced; prose is not evidence.

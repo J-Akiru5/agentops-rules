@@ -111,8 +111,16 @@ test("fresh install installs rules, CLI and config and passes a quick verify", (
   assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/subagent-orchestration.md")));
   assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/versioning.md")));
   assert.ok(
-    config.permissions.some((entry) => entry.resource === "vercel deploy*" && entry.effect === "ask"),
+    config.permissions.some((entry) => entry.resource === "vercel deploy*" && entry.effect === "allow"),
     "deploy permission missing",
+  );
+  assert.ok(
+    config.permissions.some((entry) => entry.resource === "vercel --prod*" && entry.effect === "allow"),
+    "production deploy permission missing",
+  );
+  assert.ok(
+    config.permissions.some((entry) => entry.resource === "gh pr merge * --admin*" && entry.effect === "allow"),
+    "admin merge permission missing",
   );
 
   const help = spawnSync(process.execPath, [path.join(target, "bin", "agentctl.mjs"), "help"], {
@@ -160,6 +168,30 @@ test("existing AGENTS.md, config keys and permissions are preserved; install is 
   assert.equal(configAgain.permissions.filter((entry) => entry.effect === "ask").length, managedCount);
   assert.equal(new Set(configAgain.instructions).size, configAgain.instructions.length);
   assert.ok(fs.existsSync(path.join(target, ".agentops", "backups")));
+});
+
+test("managed permission effects are upgraded in place without duplicates", () => {
+  const target = tempTarget();
+  fs.mkdirSync(target, { recursive: true });
+  fs.writeFileSync(
+    path.join(target, "opencode.jsonc"),
+    `{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    { "action": "shell", "resource": "vercel deploy*", "effect": "ask" },
+    { "action": "shell", "resource": "custom command", "effect": "allow" }
+  ]
+}
+`,
+    "utf8",
+  );
+  const result = install(["--target", target, "--opencode", "v2"]);
+  assert.equal(result.status, 0, result.stderr);
+  const config = readConfig(target);
+  const managed = config.permissions.filter((entry) => entry.resource === "vercel deploy*");
+  assert.equal(managed.length, 1, "managed rule must not be duplicated");
+  assert.equal(managed[0].effect, "allow");
+  assert.ok(config.permissions.some((entry) => entry.resource === "custom command" && entry.effect === "allow"));
 });
 
 test("pre-existing identical rules are wrapped without duplication", () => {
@@ -216,8 +248,8 @@ test("V1 install writes permission.bash/shell rules and removes the unsupported 
   assert.equal(config.permission.edit, "ask");
   assert.equal(config.permission.bash["custom *"], "allow");
   assert.equal(config.permission.shell["custom *"], "allow");
-  assert.equal(config.permission.bash["vercel deploy*"], "ask");
-  assert.equal(config.permission.shell["vercel deploy*"], "ask");
+  assert.equal(config.permission.bash["vercel deploy*"], "allow");
+  assert.equal(config.permission.shell["vercel deploy*"], "allow");
   assert.ok(config.instructions.every((entry) => !entry.includes("~/")));
   assert.equal(config.instructions.filter((entry) => entry.includes("agentops-backbone.md")).length, 1);
   assert.ok(config.instructions.some((entry) => /\/instructions\/agentops-backbone\.md$/.test(entry)));
