@@ -1,5 +1,9 @@
 # AgentOps backbone — operational contract
 
+**Opt-in.** This file applies only in a repository that has `plan/policy.yaml`. It is installed for
+everyone but loaded on demand: the global `AGENTS.md` tells the agent to read it in such a
+repository. In any other repository, none of the steps below apply.
+
 This file extends `AGENTS.md` and `autonomous-orchestration.md`; it does not replace them. Precedence:
 enforced `permissions` > authorization boundaries in `autonomous-orchestration.md` > `AGENTS.md` >
 this file. Follow the stricter, more specific rule; if two rules genuinely conflict, stop and record it.
@@ -98,16 +102,17 @@ the next executable step.
 
 ## Deployment side effects
 
-Deployment authorization is defined in `instructions/deployment-governance.md`: automatic Vercel
-deployments are allowed only for `main` and `develop`. Development migrations and `develop` deployments
-are pre-authorized; a `main`/production deployment requires an explicit owner instruction. In this
-protocol:
+Deployment eligibility and authorization are defined once, in
+`instructions/deployment-governance.md`; the repository's `vercel.json` and
+`plan/policy.yaml` (`deployment.allowed_branches`) decide which branches deploy, and the two must
+agree. In this protocol:
 
 - Contracts that can affect deployment must declare `deployment_impact` (`none`/`code`/`config`) and,
   when not `none`, `deployment_verification`. Sensitive paths live in `plan/policy.yaml` and are
   enforced by `agentctl plan validate` and the integrator.
-- The integrator's push to `develop` is the normal automatic deployment. Do not follow an integration
-  with a duplicate manual deployment or add a second pathway for the same change.
+- Where the integration branch is deployment-eligible, the integrator's push is the one automatic
+  deployment. Do not follow an integration with a duplicate manual deployment or add a second pathway
+  for the same change.
 - Apply development migrations without asking. Production database migrations remain out of scope even
   when the owner authorizes a main deployment; that requires a separate decision.
 - An explicit owner instruction to deploy/promote `main` authorizes that deployment, including the

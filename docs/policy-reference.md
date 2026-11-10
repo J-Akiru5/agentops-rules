@@ -93,8 +93,11 @@ evidence.
 
 ## Deployment
 
-The allowlist is strict. `*` must be false in `vercel.json`; only `main`/`develop` are true. Staging is
-excluded. Development migrations and `develop` deployments are pre-authorized; a `main` deployment
+The repository declares its own allowlist, and `allowed_branches` must match what its `vercel.json`
+enforces. `*` must be false there. The default is `main` plus `develop`; a repository may instead
+allow `staging` and exclude `develop`. `plan validate` checks that the list is non-empty, that the
+production branch is in it, and that no branch is both allowed and excluded (`excluded_branches` may
+be empty). Development migrations and `develop` deployments are pre-authorized; a `main` deployment
 requires an explicit owner instruction. Contracts touching `sensitive_paths` must declare
 `deployment_impact`; `none` is refused when the diff touches them. See
 [Deployment governance](/deployment-governance).

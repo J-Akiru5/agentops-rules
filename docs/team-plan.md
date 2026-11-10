@@ -5,7 +5,7 @@ Owner: project owner (human)
 Integrator machine: primary machine
 Second machine: another laptop (OpenCode 2)
 Project repository: `<project-repo>` (private)
-Rules package: `J-Akiru5/agentops-rules` (public, v1.6.0+)
+Rules package: `J-Akiru5/agentops-rules` (public, v1.7.0+)
 
 ## Objective
 
@@ -28,7 +28,7 @@ claims. Task assignment in the plan/PR and branch ownership prevent duplicate wo
 ## Phase 0 — Upgrade and install (both machines)
 
 - [ ] `opencode --version` reports **2.x** on both machines.
-- [ ] Install/update rules v1.6.0+:
+- [ ] Install/update rules v1.7.0+:
       `git pull` in the rules repo, then `node install.mjs --opencode v2`.
 - [ ] Config check on both:
       `permissions` is an array, no deprecated `permission` block, 6 absolute instruction entries,
@@ -62,9 +62,9 @@ Before the second machine pushes any feature branch:
 
 - [ ] Promote the Vercel allowlist to `main` (owner action; may be explicitly delegated):
       `git switch main && git merge --no-ff develop && git push origin main`.
-- [ ] Verify statically that `main` contains
-      `git.deploymentEnabled: {"*": false, "main": true, "develop": true}` in both apps.
-- [ ] Confirm deploy hooks are 0 and `staging` is absent.
+- [ ] Verify statically that `main` contains the repository's allowlist in both apps, by default
+      `git.deploymentEnabled: {"*": false, "main": true, "develop": true}`.
+- [ ] Confirm deploy hooks are 0 and no branch outside the allowlist can deploy.
 
 Why: until the allowlist is on the production branch, Vercel may create preview deployments for feature
 pushes and consume the daily allowance.
@@ -111,7 +111,7 @@ Acceptance:
 ## Acceptance checklist for the rollout
 
 - [ ] Both machines run OpenCode 2 with the same rules version.
-- [ ] Both configs use `permissions` (no deprecated `permission`) and 6 instructions.
+- [ ] Both configs use `permissions` (no deprecated `permission`) and 4 instructions (6 before 1.7.0).
 - [ ] Both clones read the plan from `origin/develop`.
 - [ ] The Vercel allowlist is active on `main`; no accidental preview deployments from feature branches.
 - [ ] One pilot task completed end-to-end with evidence.

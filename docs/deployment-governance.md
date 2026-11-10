@@ -5,13 +5,22 @@ separates **authorization** from permission to push.
 
 ## Eligibility
 
-Automatic Git deployments are eligible only for:
+**The repository decides.** Its `vercel.json` (`git.deploymentEnabled`), its own `AGENTS.md` and,
+where it uses the AgentOps backbone, `plan/policy.yaml` name the eligible branches, and they must
+agree. Agents read them before any push that could deploy and never edit a repository's allowlist to
+match the global rule.
+
+Where a repository declares nothing, the default is:
 
 - `main` — production; owner-reviewed by default
 - `develop` — development/integration
 
-Every other branch is ineligible, including `staging`, feature/agent/temporary/experiment branches,
-Dependabot branches, unknown branches and pull-request previews from them.
+A repository may use a different non-production branch, for example `staging` as the preview
+deployment with `develop` not deploying. On this page "`develop` deployment" means the repository's
+eligible non-production branch.
+
+Feature/agent/temporary/experiment branches, Dependabot branches, unknown branches and pull-request
+previews from them are never eligible.
 
 ## Authorization defaults
 
@@ -99,8 +108,9 @@ deployment and concurrent build limits.
 - [ ] Identify the production branch.
 - [ ] Inspect Git deployment settings and preview behavior.
 - [ ] Inspect CI workflows, package scripts, hooks, deployment APIs and webhooks.
-- [ ] Configure/verify the `main` + `develop` allowlist in each app's `vercel.json`.
-- [ ] Verify `staging` is excluded (no branch, no custom environment, no config).
+- [ ] Read the allowlist in each app's `vercel.json`; if there is none, propose `main` + `develop`
+      to the owner.
+- [ ] Verify the repository's `AGENTS.md`, CI checks and `plan/policy.yaml` name the same branches.
 - [ ] Verify feature/temporary branches cannot deploy through automatic pathways.
 - [ ] Identify duplicate deployment pathways.
 - [ ] Record platform limitations and remaining dashboard actions.

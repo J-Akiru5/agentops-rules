@@ -7,14 +7,24 @@ governed by the integration and branch-ownership protocol.
 
 ## Branch eligibility
 
-Automatic Git deployments are allowed only for:
+**The repository decides.** A repository's allowlist is what its `vercel.json`
+(`git.deploymentEnabled`) enforces, as described in its own `AGENTS.md` and, where it uses the
+AgentOps backbone, `plan/policy.yaml`. Read those before any push that could deploy. If they disagree
+with each other, stop and report the mismatch; do not pick one, and never edit a repository's
+allowlist to make it match this file.
+
+Only where a repository declares nothing is the default:
 
 - `main` — production
 - `develop` — development/integration
 
-Every other branch is **ineligible by default**, including `staging` (no staging application is used),
-feature branches, agent/`agent/*` branches, temporary worktree branches, experiment and benchmark
-branches, Dependabot branches, and any branch not named above. Pull-request preview deployments
+Some repositories use a different non-production branch (for example `staging` as the preview
+deployment, with `develop` not deploying). Wherever this file says "`develop` deployment", read it
+as "the repository's eligible non-production branch".
+
+Every branch the repository does not allowlist is **ineligible**, and these are never eligible in any
+repository: feature branches, agent/`agent/*` branches, temporary worktree branches, experiment and
+benchmark branches, Dependabot branches, and unknown branches. Pull-request preview deployments
 inherit this rule: previews from non-allowlisted branches are prohibited.
 
 Unknown branches are ineligible. Eligibility is not push permission: branch ownership, integration
@@ -131,8 +141,10 @@ manual deploy. A later explicit main deployment is a separate authorized action.
 - [ ] Identify the actual production branch.
 - [ ] Inspect Git deployment settings and Preview deployment behavior.
 - [ ] Inspect CI workflows, package scripts, hooks, deployment APIs and webhooks.
-- [ ] Configure/verify the `main` + `develop` allowlist in each app's `vercel.json`.
-- [ ] Verify `staging` is excluded (no branch, no custom environment, no eligible config).
+- [ ] Read the allowlist in each app's `vercel.json`. If there is none, propose `main` + `develop`
+      to the owner; do not add it unasked.
+- [ ] Verify the repository's `AGENTS.md`, CI checks and `plan/policy.yaml` (if any) name the same
+      eligible branches as `vercel.json`. Report any mismatch.
 - [ ] Verify feature/temporary branches cannot deploy through automatic pathways.
 - [ ] Identify duplicate deployment pathways (Actions, Docker, CLI, hooks, APIs).
 - [ ] Record platform limitations and remaining dashboard actions.
@@ -144,9 +156,10 @@ integration, record that and do not create one without authorization.
 
 ## Enforcement mechanisms and limits
 
-- **Automatic Git deployments: `git.deploymentEnabled` in `vercel.json`.** The minimatch branch map
-  `{"*": false, "main": true, "develop": true}` prevents automatic deployment creation for every other
-  branch, including pull-request previews. This happens before a build starts.
+- **Automatic Git deployments: `git.deploymentEnabled` in `vercel.json`.** A minimatch branch map
+  such as `{"*": false, "main": true, "develop": true}` (the default pair; a repository may name
+  `staging` instead of `develop`) prevents automatic deployment creation for every other branch,
+  including pull-request previews. This happens before a build starts.
 - **CLI/API deployments are not controlled by `vercel.json`.** They are governed by the authorization
   rules and permission entries above. An explicit owner main instruction may use the CLI/API or an
   admin merge where the Git path is blocked.

@@ -22,7 +22,7 @@ repository. It extends the other global rules; it does not replace them.
   owner explicitly changes the designated integrator.
 - By default only the owner promotes `main`. An explicit owner instruction to deploy/promote `main`
   authorizes the agent to perform that specific deployment, including the owner-authorized admin path
-  if repository policy blocks it. No agent pushes `staging`.
+  if repository policy blocks it. Agents push only the branches the repository's workflow gives them.
 - Use a unique `AGENT_ID` per machine (for example `opencode-primary`, `opencode-second`) so local
   journals, evidence and acknowledgments are attributable.
 
@@ -38,10 +38,11 @@ repository. It extends the other global rules; it does not replace them.
 
 ## Shared constraints
 
-- Never push `staging`; push `main` only when the owner explicitly instructs a main deployment or
-  promotion. Never force-push or rewrite shared history.
-- Deployment allowlist: only `main` and `develop`. Development migrations and `develop` deployments
-  are pre-authorized; a main/production deployment requires the owner's explicit instruction. Before
+- Push `main` only when the owner explicitly instructs a main deployment or promotion; push any other
+  deploying branch only as the repository's workflow allows. Never force-push or rewrite shared
+  history.
+- Deployment allowlist: whatever the repository's `vercel.json` enforces (see
+  `deployment-governance.md`). A main/production deployment requires the owner's explicit instruction. Before
   pushing a feature branch, confirm the repository's allowlist is active on `main`; otherwise Vercel
   may still create preview deployments. Never deploy to test.
 - Resource measurements are per machine. Run `orchestrator resources` locally and respect that

@@ -272,19 +272,22 @@ export function validatePolicy(policy) {
   const allowed = deployment.allowed_branches ?? [];
   if (!Array.isArray(allowed) || allowed.length === 0) {
     errors.push("policy.deployment.allowed_branches must be a non-empty list");
-  } else {
-    if (!allowed.includes("main") || !allowed.includes("develop")) {
-      errors.push("policy.deployment.allowed_branches must include main and develop");
-    }
-    if (allowed.includes("staging")) errors.push("policy.deployment.allowed_branches must not include staging");
   }
   if (!deployment.production_branch) {
     errors.push("policy.deployment.production_branch must be set");
   } else if (!allowed.includes(deployment.production_branch)) {
     errors.push("policy.deployment.production_branch must be deployment-eligible");
   }
-  if (!Array.isArray(deployment.excluded_branches) || !deployment.excluded_branches.includes("staging")) {
-    errors.push("policy.deployment.excluded_branches must explicitly exclude staging");
+  // The repository declares its own allowlist (it must match its vercel.json). The only structural
+  // rule is that a branch cannot be both eligible and excluded.
+  if (!Array.isArray(deployment.excluded_branches)) {
+    errors.push("policy.deployment.excluded_branches must be a list (it may be empty)");
+  } else if (Array.isArray(allowed)) {
+    for (const branch of deployment.excluded_branches) {
+      if (allowed.includes(branch)) {
+        errors.push(`policy.deployment: "${branch}" is listed as both allowed and excluded`);
+      }
+    }
   }
   if (!Array.isArray(deployment.sensitive_paths) || deployment.sensitive_paths.length === 0) {
     errors.push("policy.deployment.sensitive_paths must be a non-empty list");

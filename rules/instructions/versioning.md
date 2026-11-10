@@ -36,8 +36,10 @@ For a release, all of these MUST agree:
 4. the release title
 5. the `CHANGELOG.md` section for that version
 
-Run `node scripts/release-check.mjs --tag vX.Y.Z` before tagging. CI and the release workflow run the
-same check. A mismatch fails the release.
+Where the repository has a release check, run it before tagging (in this package:
+`node scripts/release-check.mjs --tag vX.Y.Z`; CI and the release workflow run the same check, and a
+mismatch fails the release). Not every repository has one. If it is missing, compare the sources by
+hand and report that no script checked them; do not claim the check ran.
 
 ## Changelog
 
@@ -122,7 +124,8 @@ Dropping support for a platform/version is a MAJOR change.
 - README badges, docs home and installer output show the current version.
 - Release notes include migration/compatibility notes.
 - Docs describe the current release; use Git tags for historical versions.
-- `scripts/release-check.mjs` is the executable version policy; run it before every tag.
+- A repository's release check (here `scripts/release-check.mjs`) is its executable version policy;
+  run it before every tag where it exists.
 
 ## Honesty
 

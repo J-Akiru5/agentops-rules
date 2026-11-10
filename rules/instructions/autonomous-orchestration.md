@@ -23,17 +23,21 @@ When the task is clear and the actions are authorized, reversible and inside the
   replacing it.
 - Form an executable plan with acceptance criteria, then implement it. Do not stop at a plan when the
   plan is executable, and do not present a proposal as completed work.
-- Isolate the work: one task, one worktree, one branch, named after the task. `agentctl claim`
-  auto-creates the worktree and branch by default and refuses the primary, dirty, unregistered or
-  foreign-claimed worktree. Move the session there (or use absolute paths); never implement in the
-  primary checkout. Reuse an existing worktree only when it is yours, clean and idle.
+- Isolate the work: one task, one worktree, one branch, named after the task. In a repository that
+  uses the AgentOps backbone (it has `plan/policy.yaml`), `agentctl claim` creates them. Move the
+  session there (or use absolute paths); never implement in the primary checkout. Reuse an existing
+  worktree only when it is yours, clean and idle.
 - Split a big feature into task contracts: one worktree per task, integrated incrementally. Avoid one
   long-lived mega-worktree or a single branch carrying unrelated work.
 - Write tests with the change; run focused checks first, then the repository's full gate.
 - Diagnose and repair ordinary failures yourself, with a bounded number of evidence-based attempts.
 - Review the diff before claiming completion.
-- Reconcile through the repository's own workflow (branch, PR, CI, merge), never by pushing to the
-  integration branch directly.
+- Reconcile through the workflow the repository documents (a pull request, an integrator, or an
+  orchestrator that merges reviewed branches). Do not push to the integration branch outside that
+  workflow, and do not substitute a different workflow because this file mentions one.
+- A local run of the checks is a courtesy, not the gate. The gate is CI on the pushed commit plus
+  whoever the repository names to merge. Say which of the repository's checks you ran and which you
+  did not; a check that did not run is never reported as passed.
 - Report verified facts, unverified assumptions, remaining risks and anything that needs the owner.
 
 Do not ask for approval of ordinary, reversible steps. Do not send vague requests to "check
@@ -49,11 +53,13 @@ worktree; tests; routine checks; fixing ordinary defects; reviewing diffs; docum
 your task branch; resolving evidence-supported merge conflicts.
 
 **Tier B — act with safeguards.** Development database migrations against the verified development
-target; deployments of `develop` (prefer the integrator/Git deployment; do not duplicate); dependency
+target; the automatic deployment that follows an authorized push to a branch the repository
+allowlists (do not duplicate it); dependency
 changes; integration into `develop` through the repository workflow; changes to authentication, RLS
 or schema; expensive end-to-end runs; pushing your own branch; removing a verified-disposable worktree
 when cleanup is authorized. Preflight, keep a recovery path, inspect the final diff, run the relevant
-checks. Do not stop to ask for permission to apply a development migration or deploy `develop`.
+checks. A repository's own "ask the owner before" list overrides this tier: if it reserves migrations,
+schema, auth or RLS changes for the owner, ask.
 
 **Tier C — stop and ask, even when unattended.** Destructive production database changes; production
 deployment/promotion **unless the owner explicitly instructed that specific deployment**; publishing
@@ -116,8 +122,8 @@ Worktrees are shared ground. Before work that can interact with parallel work, r
   reuse the artefact or read its result.
 - If a dependency is another agent's work, wait for its commit or PR rather than reimplementing it.
 - The durable coordination record is the repository itself: the plan document, the PR, the commit
-  messages and the branch inventory. Do not invent a parallel coordination database when the
-  repository already records this.
+  messages and the branch inventory. A repository that opts into the AgentOps backbone also keeps
+  claims and evidence in its local state database; do not add any other coordination store.
 
 ## Delegation and benchmarks
 
@@ -166,16 +172,8 @@ and state plainly when the environment does not support a capability.
 
 ## Deployment side effects
 
-Deployment authorization is governed by `instructions/deployment-governance.md`: automatic Vercel
-deployments are allowed only for `main` and `develop`. Development migrations and `develop`
-deployments are pre-authorized; an explicit owner instruction is required for a `main`/production
-deployment. Pushing an eligible branch is a consequential operation owned by the integrator; never add
-a second deployment for the same integration.
-
-- Apply development migrations against the verified development target without asking; never production.
-- Prefer the integrator push for `develop`; do not create a duplicate manual deployment.
-- On an explicit owner main instruction, perform the reviewed deployment without re-asking and use the
-  owner-authorized admin path if repository policy blocks it. No force-push or history rewrite.
-- Do not create preview deployments for other branches, deploy hooks, or test deployments.
-- Do not verify governance changes by deploying; use static configuration inspection and local checks.
-- Production database migrations remain Tier C. Local builds and `vercel build` are allowed.
+Deployment eligibility and authorization are defined once, in
+`instructions/deployment-governance.md`. The repository's own configuration decides which branches
+deploy. Pushing an eligible branch is a consequential operation; never add a second deployment for the
+same change. Production database migrations remain Tier C. Local builds and `vercel build` are
+allowed.

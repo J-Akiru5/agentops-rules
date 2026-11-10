@@ -71,7 +71,7 @@ is migrated automatically.
 | Path | Purpose |
 | --- | --- |
 | `~/.config/opencode/AGENTS.md` | Managed block: waiting/status, worktree, versioning, deployment, resource/subagent rules |
-| `~/.config/opencode/instructions/*.md` | Six detailed protocols (autonomy, AgentOps, deployment, team, subagents, versioning) |
+| `~/.config/opencode/instructions/*.md` | Six detailed protocols. Four load in every session (autonomy, deployment, subagents, versioning); two load only in repositories that opt in with `plan/policy.yaml` (AgentOps backbone, team) |
 | `~/.config/opencode/agents/benchmark.md` | Read-only global benchmark subagent |
 | `~/.config/opencode/bin/agentctl.mjs` + `bin/agentops/` | Planning/verification/integration CLI |
 | `~/.config/opencode/bin/orchestrator.mjs` | Resource and worktree inventory helper |

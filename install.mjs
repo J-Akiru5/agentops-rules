@@ -52,6 +52,13 @@ const MANAGED_INSTRUCTION_FILES = [
   "versioning.md",
 ];
 
+/**
+ * Installed for every user but loaded only in repositories that opt in with `plan/policy.yaml`
+ * (the managed AGENTS.md block tells the agent when to read them). They are not listed in
+ * `instructions`, so they cost no context in repositories that do not use the AgentOps backbone.
+ */
+const ON_DEMAND_INSTRUCTION_FILES = ["agentops-backbone.md", "team-development.md"];
+
 const MANAGED_PERMISSIONS = [
   { action: "shell", resource: "git push --force*", effect: "ask" },
   { action: "shell", resource: "git push -f*", effect: "ask" },
@@ -239,7 +246,7 @@ function detectOpenCode(explicit) {
 }
 
 function managedInstructionPaths(target) {
-  return MANAGED_INSTRUCTION_FILES.map((name) =>
+  return MANAGED_INSTRUCTION_FILES.filter((name) => !ON_DEMAND_INSTRUCTION_FILES.includes(name)).map((name) =>
     path.join(target, "instructions", name).split(path.sep).join("/"),
   );
 }
