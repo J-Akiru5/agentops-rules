@@ -77,11 +77,13 @@ Expected:
 The config should contain an absolute `instructions` entry for each of:
 
 - `instructions/autonomous-orchestration.md`
-- `instructions/agentops-backbone.md`
 - `instructions/deployment-governance.md`
-- `instructions/team-development.md`
 - `instructions/subagent-orchestration.md`
 - `instructions/versioning.md`
+
+`instructions/agentops-backbone.md` and `instructions/team-development.md` are installed on disk but
+are **not** listed (since 1.7.0). They are read on demand in repositories that opt in with
+`plan/policy.yaml`.
 
 The installer also places the read-only `benchmark` subagent at
 `~/.config/opencode/agents/benchmark.md`.
@@ -93,9 +95,7 @@ The installer also places the read-only `benchmark` subagent at
   "$schema": "https://opencode.ai/config.json",
   "instructions": [
     "C:/Users/<you>/.config/opencode/instructions/autonomous-orchestration.md",
-    "C:/Users/<you>/.config/opencode/instructions/agentops-backbone.md",
     "C:/Users/<you>/.config/opencode/instructions/deployment-governance.md",
-    "C:/Users/<you>/.config/opencode/instructions/team-development.md",
     "C:/Users/<you>/.config/opencode/instructions/subagent-orchestration.md",
     "C:/Users/<you>/.config/opencode/instructions/versioning.md"
   ],

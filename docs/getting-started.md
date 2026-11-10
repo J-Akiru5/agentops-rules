@@ -35,7 +35,9 @@ The installer prints the OpenCode generation it detected. Override with `--openc
 - Installs six instruction files under `~/.config/opencode/instructions/`.
 - Installs `agentctl`, its modules, and `orchestrator` under `~/.config/opencode/bin/`.
 - Installs the read-only `benchmark` subagent under `~/.config/opencode/agents/`.
-- Merges six instruction entries and 27 ordered permission rules into `opencode.jsonc`.
+- Merges four instruction entries and 27 ordered permission rules into `opencode.jsonc`. The AgentOps
+  backbone and team files are installed but not listed: the managed `AGENTS.md` block tells the agent
+  to read them only in a repository that has `plan/policy.yaml`.
 - Backs up every modified file under `~/.config/opencode/.agentops/backups/<timestamp>/`.
 
 It is idempotent: run it again after updating the package.

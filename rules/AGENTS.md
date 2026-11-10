@@ -66,15 +66,18 @@ The objective is to:
 
 **Never sacrifice existing work to achieve a clean branch or working directory.**
 
-## Worktree instantiation and isolation
+## Worktree isolation, and the AgentOps backbone (opt-in per repository)
 
-`agentctl claim <T-0000> --agent <id>` creates the task worktree and branch by default using the
-policy `worktree` settings (`root`, `branch_prefix`, `base`, `auto_create`, `require_isolated_claim`).
-It refuses the primary worktree, unregistered or dirty worktrees, a branch mismatch, and worktrees
-already claimed by another task. After creation, move the session to the new worktree with the host's
-worktree/session tool or use that path explicitly; never implement in the primary checkout. If
-auto-create is disabled, pass `--create` or a clean isolated `--worktree`. Split a large feature into
-task contracts rather than keeping one long-lived mega-worktree.
+One task, one worktree, one branch. Never implement in the primary checkout. Split a large feature
+into separate tasks rather than keeping one long-lived mega-worktree.
+
+The AgentOps backbone (`agentctl`: claim, verify, submit, integrate, with evidence keyed by tree SHA)
+applies **only in a repository that has `plan/policy.yaml`**. In such a repository, read
+`~/.config/opencode/instructions/agentops-backbone.md` before starting work and follow it; when more
+than one machine works on the repository, also read
+`~/.config/opencode/instructions/team-development.md`. In every other repository the backbone does
+not apply: follow that repository's own `AGENTS.md` for how work is claimed, checked and merged, and
+do not describe `agentctl` steps as done.
 
 ## 2. Worktree Discovery Is Mandatory
 
@@ -279,8 +282,9 @@ Use Semantic Versioning (`MAJOR.MINOR.PATCH`), annotated `vX.Y.Z` tags, and immu
 
 - Agents prepare releases (Unreleased changelog, version files, tests, release notes, artifact);
   **the owner creates/pushes the tag and publishes** unless a named release is explicitly delegated.
-- `package.json`, `VERSION`, the Git tag and the release title must match; run
-  `node scripts/release-check.mjs --tag vX.Y.Z` before tagging.
+- `package.json`, `VERSION`, the Git tag and the release title must match. Where the repository has a
+  release check (for example `node scripts/release-check.mjs --tag vX.Y.Z`), run it before tagging;
+  where it has none, compare them by hand and say that no script checked it.
 - MAJOR for breaking changes; MINOR for compatible features/instructions; PATCH for fixes/docs.
   Contract `rev` is an amendment revision, not semver.
 - Never retag, delete or replace a published release; fix forward with a new PATCH. No npm publication
@@ -289,16 +293,19 @@ Use Semantic Versioning (`MAJOR.MINOR.PATCH`), annotated `vX.Y.Z` tags, and immu
 
 # Vercel Deployment Governance
 
-Automatic Git deployments are allowed **only** for `main` and `develop`. Feature, agent, temporary,
-experiment, Dependabot, unknown branches and their pull-request previews are ineligible. Never deploy
-another branch.
+**The repository decides which branches deploy.** Its `vercel.json` (`git.deploymentEnabled`) and
+its own `AGENTS.md` are the allowlist; read them before any push that could deploy. Only where a
+repository declares nothing is the default `main` (production) plus `develop` (integration).
+Feature, agent, temporary, experiment, Dependabot and unknown branches and their pull-request
+previews are never eligible. Never deploy a branch the repository does not allowlist, and never edit
+the allowlist to match this file.
 
-- **Development migrations are pre-authorized.** Apply migrations against the verified development
-  target without asking, using `agentctl db push` or the project's configured migration command.
-  Never use production credentials or data. Production migrations remain out of scope.
-- **Deployments of `develop` are pre-authorized.** Prefer the integrator push/Git deployment. Do not
-  create a duplicate manual deployment for the same integration. Do not refuse this work on the
-  grounds that the owner usually does it.
+- **Development migrations are pre-authorized** unless the repository's own rules reserve them for the
+  owner. Apply them against the verified development target using the project's configured migration
+  command. Never use production credentials or data. Production migrations remain out of scope.
+- **The automatic deployment that follows an authorized push to an allowlisted non-production branch
+  is pre-authorized.** Who may push that branch is the repository's rule, not this one. Do not create
+  a duplicate manual deployment for the same change.
 - **`main` is production and owner-reviewed by default.** Agents do not promote `main` unsolicited.
   When the owner explicitly says to deploy to `main`, promote `main`, or ship production, that
   instruction authorizes that specific deployment: do it without asking again. If repository policy
@@ -309,8 +316,8 @@ another branch.
 - Do not run unsolicited `vercel deploy`, `vercel --prod`, `vercel promote`, `vercel redeploy`,
   `vercel rollback`, create deploy hooks, or invoke deployment APIs. Do not deploy to test.
   `vercel build` is local and allowed.
-- Keep operations distinct: local verification / Git push / automatic `develop` deployment / explicit
-  `main` deployment. The integrator push is the one automatic deployment; never add a second for the
-  same integration.
+- Keep operations distinct: local verification / Git push / automatic non-production deployment /
+  explicit `main` deployment. One push, one automatic deployment; never add a second for the same
+  change.
 - Full protocol and the first-instantiation checklist:
   `~/.config/opencode/instructions/deployment-governance.md`.

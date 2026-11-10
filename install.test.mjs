@@ -107,7 +107,10 @@ test("fresh install installs rules, CLI and config and passes a quick verify", (
 
   const config = readConfig(target);
   assert.equal(config.$schema, "https://opencode.ai/config.json");
-  assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/team-development.md")));
+  // On-demand files exist on disk (checked above) but are not loaded into every session.
+  assert.ok(config.instructions.every((entry) => !entry.endsWith("/instructions/team-development.md")));
+  assert.ok(config.instructions.every((entry) => !entry.endsWith("/instructions/agentops-backbone.md")));
+  assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/autonomous-orchestration.md")));
   assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/subagent-orchestration.md")));
   assert.ok(config.instructions.some((entry) => entry.endsWith("/instructions/versioning.md")));
   assert.ok(
@@ -251,8 +254,9 @@ test("V1 install writes permission.bash/shell rules and removes the unsupported 
   assert.equal(config.permission.bash["vercel deploy*"], "allow");
   assert.equal(config.permission.shell["vercel deploy*"], "allow");
   assert.ok(config.instructions.every((entry) => !entry.includes("~/")));
-  assert.equal(config.instructions.filter((entry) => entry.includes("agentops-backbone.md")).length, 1);
-  assert.ok(config.instructions.some((entry) => /\/instructions\/agentops-backbone\.md$/.test(entry)));
+  // The seeded "~/" backbone entry is a managed entry that is now on demand: it is removed.
+  assert.equal(config.instructions.filter((entry) => entry.includes("agentops-backbone.md")).length, 0);
+  assert.ok(config.instructions.some((entry) => /\/instructions\/autonomous-orchestration\.md$/.test(entry)));
 });
 
 test("V2 install converts a V1 permission object instead of leaving a deprecated block", () => {
@@ -294,11 +298,11 @@ test("V2 install converts a V1 permission object instead of leaving a deprecated
   );
   assert.ok(config.permissions.some((entry) => entry.action === "edit" && entry.effect === "ask"));
   assert.ok(config.permissions.some((entry) => entry.action === "shell" && entry.resource === "vercel deploy*"));
+  // The backbone and team files are installed but loaded on demand, so a stale entry for one of
+  // them (this test seeds team-development.md) is removed rather than kept.
   assert.deepEqual(config.instructions, [
     path.join(target, "instructions", "autonomous-orchestration.md").replaceAll("\\", "/"),
-    path.join(target, "instructions", "agentops-backbone.md").replaceAll("\\", "/"),
     path.join(target, "instructions", "deployment-governance.md").replaceAll("\\", "/"),
-    path.join(target, "instructions", "team-development.md").replaceAll("\\", "/"),
     path.join(target, "instructions", "subagent-orchestration.md").replaceAll("\\", "/"),
     path.join(target, "instructions", "versioning.md").replaceAll("\\", "/"),
   ]);

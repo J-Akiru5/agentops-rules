@@ -4,6 +4,7 @@
 
 | Version | Highlights | Migration action |
 | --- | --- | --- |
+| **1.7.0** | The repository's own allowlist decides which branches deploy; the AgentOps backbone is opt-in per repository and loaded on demand; contradictions between rule files removed | Reinstall. Expect **4 instructions** (the backbone and team entries are removed from `opencode.jsonc`; the files stay on disk) and still 27 permissions. A `plan/policy.yaml` may now allow `staging`. |
 | **1.6.0** | Development migrations and `develop` deployments pre-authorized; explicit owner instruction authorizes a `main` deployment; permission effects updated | Reinstall. Expect **6 instructions** and **27 permissions**; V2 installer updates the managed `ask` effects to `allow` in place. No CLI/state/schema change. |
 | **1.5.0** | Versioning/release rule; public docs site; public repo; release automation | Reinstall; expect **6 instructions** and still 27 permissions. No config shape change. |
 | **1.4.0** | Automatic worktree instantiation + isolation enforcement in `claim`; `worktree` policy block | Reinstall. Existing workflows continue; claims now auto-create by default. Set `worktree.auto_create: false` to keep manual management. |

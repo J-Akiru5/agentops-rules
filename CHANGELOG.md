@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.7.0 — 2026-11-11
+
+- **The repository decides which branches deploy.** A repository's `vercel.json`, its own
+  `AGENTS.md` and `plan/policy.yaml` are the allowlist. `main` plus `develop` is only the default
+  for a repository that declares nothing. Agents never edit a repository's allowlist to match the
+  global rule. This removes a conflict with repositories that deploy `staging` instead of `develop`.
+- **`plan validate` no longer hard-codes branch names.** It no longer requires `develop` in
+  `deployment.allowed_branches` or `staging` in `excluded_branches`. It checks that the list is
+  non-empty, that the production branch is in it, and that no branch is both allowed and excluded.
+- **The AgentOps backbone is opt-in per repository.** `agentops-backbone.md` and
+  `team-development.md` are still installed, but the installer no longer lists them in
+  `instructions` and removes existing entries for them. The managed `AGENTS.md` block tells the
+  agent to read them only where `plan/policy.yaml` exists. Sessions in other repositories load about
+  11 KB less prose and are no longer told to run `agentctl` steps that do not apply.
+- **Contradictions removed.** Integration follows the workflow the repository documents (pull
+  request, integrator or orchestrator) instead of prescribing one; the "no parallel coordination
+  database" line now names the backbone's state database as the one exception; the deployment rule is
+  stated once in `deployment-governance.md` and the other files point to it.
+- **A local check is not the gate.** The autonomy rule now says CI on the pushed commit and the
+  repository's named merger are the gate, and that a check that did not run is never reported as
+  passed.
+- **Release check is conditional.** The global rule no longer assumes every repository has
+  `scripts/release-check.mjs`.
+- **Repository rules win on "ask the owner".** A repository's own list of owner-only actions
+  (migrations, schema, auth, RLS) overrides the global Tier B default.
+- No change to the 27 permission rules, the CLI or the state schema.
+
 ## 1.6.0 — 2026-10-22
 
 - **Development-first authorization**: development database migrations against the verified
